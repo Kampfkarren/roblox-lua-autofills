@@ -13,6 +13,14 @@
     "activationEvents": [
         "onLanguage:lua"
     ],
+    "contributes": {
+        "snippets": [
+            {
+                "language": "lua",
+                "path": "./snippets.json"
+            }
+        ]
+    },
     "main": "./out/extension",
     "scripts": {
         "vscode:prepublish": "npm run compile",
