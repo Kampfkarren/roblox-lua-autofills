@@ -1,0 +1,9 @@
+{
+  "GetService": {
+		"prefix": "GetService",
+		"body": [
+			"local ${1|AssetService,BadgeService,ChangeHistoryService,Chat,CollectionService,ContentProvider,ContextActionService,CoreGui,DataStoreService,Debris,GamePassService,GroupService,GuiService,HapticService,HttpService,InsertService,JointsService,KeyboardService,KeyframeSequenceProvider,Lighting,LogService,MarketplaceService,MouseService,NetworkClient,NetworkServer,PathfindingService,PhysicsService,Players,PointsService,ReplicatedFirst,ReplicatedStorage,RunService,ScriptContext,Selection,ServerScriptService,ServerStorage,SoundService,StarterGui,StarterPack,StarterPlayer,Stats,Teams,TeleportService,TestService,TextService,TweenService,UserInputService,VRService,Workspace|} = game:GetService(\"$1\")$0"
+		],
+		"description": "Import service via GetService"
+	}
+}
