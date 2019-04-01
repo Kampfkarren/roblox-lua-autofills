@@ -4,6 +4,7 @@
     "description": "Autocompletes for Roblox Lua.",
     "version": "1.0.0",
     "publisher": "Kampfkarren",
+    "repository": "https://github.com/Kampfkarren/roblox-lua-autofills",
     "engines": {
         "vscode": "^1.32.0"
     },
