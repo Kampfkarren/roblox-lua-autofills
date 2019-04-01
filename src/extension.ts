@@ -1,8 +1,7 @@
-"use strict"
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from "vscode"
 import * as request from "request-promise-native"
+import * as vscode from "vscode"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
 
@@ -31,8 +30,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const enumItems = apiDump.Enums.map((eenum) => new vscode.CompletionItem(eenum.Name))
 
-    let enumNamesAndItems: { [name: string]: vscode.CompletionItem[] } = {}
-    for (let eenum of apiDump.Enums) {
+    const enumNamesAndItems: { [name: string]: vscode.CompletionItem[] } = {}
+    for (const eenum of apiDump.Enums) {
         enumNamesAndItems[eenum.Name] = eenum.Items.map((item) => new vscode.CompletionItem(item.Name))
     }
 
