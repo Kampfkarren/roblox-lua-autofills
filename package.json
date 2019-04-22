@@ -2,14 +2,14 @@
     "name": "roblox-lua-autofills",
     "displayName": "Roblox Lua Autocompletes",
     "description": "Autocompletes for Roblox Lua.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "publisher": "Kampfkarren",
     "repository": "https://github.com/Kampfkarren/roblox-lua-autofills",
     "engines": {
         "vscode": "^1.32.0"
     },
     "categories": [
-        "Other"
+        "Snippets"
     ],
     "activationEvents": [
         "onLanguage:lua"

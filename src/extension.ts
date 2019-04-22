@@ -4,9 +4,21 @@ import * as request from "request-promise-native"
 import * as vscode from "vscode"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
+const UNCREATABLE_TAGS = new Set([
+    "NotBrowsable",
+    "NotCreatable",
+    "Service",
+    "Settings",
+])
 
 interface IApiDump {
+    Classes: IClass[],
     Enums: IEnum[],
+}
+
+interface IClass {
+    Name: string,
+    Tags?: string,
 }
 
 interface IEnum {
@@ -27,6 +39,26 @@ export async function activate(context: vscode.ExtensionContext) {
     const apiDump: IApiDump = JSON.parse(await request(API_DUMP).catch((err) => {
         vscode.window.showErrorMessage("Error downloading API dump", err.toString())
     }))
+
+    const instanceNamesSnippet = new vscode.CompletionItem(
+        "Instance.new",
+        vscode.CompletionItemKind.Snippet,
+    )
+
+    const snippetString = new vscode.SnippetString("Instance.new(\"")
+    snippetString.value += "${1|" + apiDump.Classes.filter((klass) => {
+        const tags = klass.Tags
+        if (tags) {
+            for (const tag of tags) {
+                if (UNCREATABLE_TAGS.has(tag)) {
+                    return false
+                }
+            }
+        }
+
+        return true
+    }).map((klass) => klass.Name).sort().join(",") + "|}\")" // https://github.com/Microsoft/vscode/issues/43643
+    instanceNamesSnippet.insertText = snippetString
 
     const enumItems = apiDump.Enums.map((eenum) => new vscode.CompletionItem(eenum.Name))
 
@@ -52,7 +84,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             }
 
-            return []
+            return [
+                instanceNamesSnippet,
+            ]
         },
     }, "."))
 }
