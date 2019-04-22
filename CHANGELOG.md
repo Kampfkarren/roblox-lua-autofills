@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.2.2]
+- Instance.new autofill will no longer show deprecated instances
+
 ## [1.2.1]
 - Added Instance.new autofill to README
 

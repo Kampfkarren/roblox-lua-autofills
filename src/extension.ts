@@ -5,6 +5,7 @@ import * as vscode from "vscode"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
 const UNCREATABLE_TAGS = new Set([
+    "Deprecated",
     "NotBrowsable",
     "NotCreatable",
     "Service",
