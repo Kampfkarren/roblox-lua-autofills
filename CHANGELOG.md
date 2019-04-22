@@ -10,7 +10,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Added Instance.new autofill to README
 
 ## [1.2.0]
-- Added autofill for Instance.new ![](https://giant.gfycat.com/ExemplaryPowerlessHyracotherium.gif)
+- Added autofill for Instance.new
+![](https://giant.gfycat.com/ExemplaryPowerlessHyracotherium.gif)
 
 ## [1.1.0]
 - [Added snippet to automatically fill GetService](https://github.com/Kampfkarren/roblox-lua-autofills/pull/1)
