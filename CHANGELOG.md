@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.2.3]
+- Fixed a bug where Enum autocompletes would not fire if tabbed whitespace was before them
+
 ## [1.2.2]
 - Instance.new autofill will no longer show deprecated instances
 
