@@ -2,8 +2,10 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as request from "request-promise-native"
 import * as vscode from "vscode"
+import { RobloxColorProvider } from "./color"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
+const SELECTOR = { scheme: "file", language: "lua" }
 const UNCREATABLE_TAGS = new Set([
     "Deprecated",
     "NotBrowsable",
@@ -68,7 +70,9 @@ export async function activate(context: vscode.ExtensionContext) {
         enumNamesAndItems[eenum.Name] = eenum.Items.map((item) => new vscode.CompletionItem(item.Name))
     }
 
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: "file", language: "lua"}, {
+    context.subscriptions.push(vscode.languages.registerColorProvider(SELECTOR, new RobloxColorProvider()))
+
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, {
         provideCompletionItems(document, position, cancel, completionContext) {
             const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/\s+/)
             const text = textSplit[textSplit.length - 1]
