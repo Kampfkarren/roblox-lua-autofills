@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.3.1]
+- Changed prefix for GetService autofill to game:GetService to make it more intuitive.
+
 ## [1.3.0]
 - [Added support for Color3 previewing/picking](https://twitter.com/Kampfkarren/status/1130213715872083968)
 
