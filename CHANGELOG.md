@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.3.2]
+- Fixed Enum autofill not triggering if there was a non-whitespace before it.
+
 ## [1.3.1]
 - Changed prefix for GetService autofill to game:GetService to make it more intuitive.
 

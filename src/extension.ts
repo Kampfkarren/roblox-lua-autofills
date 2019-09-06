@@ -74,8 +74,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, {
         provideCompletionItems(document, position, cancel, completionContext) {
-            const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/\s+/)
+            const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/[^\w\.]+/)
             const text = textSplit[textSplit.length - 1]
+            console.log(textSplit)
             if (text !== undefined && text.startsWith("Enum.")) {
                 const tokens = text.split(".")
                 if (tokens.length === 1 || tokens.length === 2) {
