@@ -3,6 +3,7 @@
 import * as request from "request-promise-native"
 import * as vscode from "vscode"
 import { RobloxColorProvider } from "./color"
+import { RojoHandler } from "./rojo"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
 const SELECTOR = { scheme: "file", language: "lua" }
@@ -38,6 +39,10 @@ interface IEnumItem {
 // your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
     console.log("roblox-lua-autofills activated")
+
+    if (vscode.workspace.workspaceFolders !== undefined) {
+        context.subscriptions.push(new RojoHandler())
+    }
 
     const apiDump: IApiDump = JSON.parse(await request(API_DUMP).catch((err) => {
         vscode.window.showErrorMessage("Error downloading API dump", err.toString())
@@ -76,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext) {
         provideCompletionItems(document, position, cancel, completionContext) {
             const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/[^\w\.]+/)
             const text = textSplit[textSplit.length - 1]
-            console.log(textSplit)
+
             if (text !== undefined && text.startsWith("Enum.")) {
                 const tokens = text.split(".")
                 if (tokens.length === 1 || tokens.length === 2) {

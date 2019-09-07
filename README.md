@@ -1,7 +1,8 @@
 A Visual Studio Code extension to auto fill Roblox patterns.
 
 Currently supports:
+- Color3 preview/picker
 - Enum/EnumItem auto fill
 - GetService auto fill
 - Instance.new auto fill
-- Color3 preview/picker
+- Rojo "require" auto fill
