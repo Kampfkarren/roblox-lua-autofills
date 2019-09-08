@@ -16,6 +16,17 @@
         "workspaceContains:*.project.json"
     ],
     "contributes": {
+        "configuration": {
+            "title": "Roblox Lua Autocompletes",
+            "properties": {
+                "robloxLuaAutofills.rojo": {
+                    "type": "boolean",
+                    "description": "Specifies whether to support Rojo specific autocompletes",
+                    "default": true
+                }
+            }
+        },
+
         "snippets": [
             {
                 "language": "lua",

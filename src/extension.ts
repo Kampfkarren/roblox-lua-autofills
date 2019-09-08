@@ -40,9 +40,27 @@ interface IEnumItem {
 export async function activate(context: vscode.ExtensionContext) {
     console.log("roblox-lua-autofills activated")
 
-    if (vscode.workspace.workspaceFolders !== undefined) {
-        context.subscriptions.push(new RojoHandler())
+    let rojoHandler: RojoHandler | undefined
+
+    if (vscode.workspace.workspaceFolders !== undefined
+        && vscode.workspace.getConfiguration("robloxLuaAutofills").get("rojo"))
+    {
+        rojoHandler = new RojoHandler()
+        context.subscriptions.push(rojoHandler)
     }
+
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration("robloxLuaAutofills.rojo")) {
+            if (vscode.workspace.getConfiguration("robloxLuaAutofills").get("rojo")) {
+                rojoHandler = new RojoHandler()
+                context.subscriptions.push(rojoHandler)
+            } else {
+                if (rojoHandler) {
+                    rojoHandler.dispose()
+                }
+            }
+        }
+    }))
 
     const apiDump: IApiDump = JSON.parse(await request(API_DUMP).catch((err) => {
         vscode.window.showErrorMessage("Error downloading API dump", err.toString())

@@ -88,6 +88,8 @@ interface InstanceMeta {
 }
 
 export class RojoHandler {
+	completionItemProvider: vscode.Disposable
+
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
 
 	projects: Map<vscode.Uri, Project> = new Map()
@@ -100,7 +102,7 @@ export class RojoHandler {
 
 		this.refreshFilesCache()
 
-		vscode.languages.registerCompletionItemProvider(SELECTOR, {
+		this.completionItemProvider = vscode.languages.registerCompletionItemProvider(SELECTOR, {
 			provideCompletionItems: (document, position) => {
 				const line = document.lineAt(position.line).text.substr(0, position.character)
 				const requireMatch = line.match(/require\(([A-Za-z]+)((?:\.[\w]*)+)/)
@@ -219,6 +221,7 @@ export class RojoHandler {
 	}
 
 	dispose() {
+		this.completionItemProvider.dispose()
 		this.projectWatcher.dispose()
 
 		for (const metas of this.instances.values()) {
