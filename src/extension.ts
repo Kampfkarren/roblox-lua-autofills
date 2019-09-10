@@ -5,11 +5,10 @@ import { RobloxColorProvider } from "./color"
 import { EnumCompletionProvider } from "./enum"
 import { InstanceCompletionProvider } from "./instance"
 import { RojoHandler } from "./rojo"
+import { ServiceCompletionProvider } from "./services"
 
 const SELECTOR = { scheme: "file", language: "lua" }
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
     console.log("roblox-lua-autofills activated")
 
@@ -39,4 +38,5 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new InstanceCompletionProvider(), "."))
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new EnumCompletionProvider(), "."))
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new ServiceCompletionProvider(), ".", ":"))
 }

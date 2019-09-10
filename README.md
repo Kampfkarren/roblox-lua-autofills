@@ -6,3 +6,4 @@ Currently supports:
 - GetService auto fill
 - Instance.new auto fill
 - Rojo "require" auto fill
+- Service member auto fill

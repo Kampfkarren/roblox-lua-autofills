@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.5.0]
+- [Added autofill for service members.](https://twitter.com/Kampfkarren/status/1171544346304245760)
+
 ## [1.4.1]
 - Fixed a bug where new/deleted files would not be shown in the Rojo `require` autocomplete.
 

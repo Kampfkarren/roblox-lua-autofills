@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { getApiDump, IEnum } from "./dump"
+import { getApiDump, ApiEnum } from "./dump"
 
 export class EnumCompletionProvider implements vscode.CompletionItemProvider {
 	enumItems: Promise<vscode.CompletionItem[]>
@@ -10,7 +10,7 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
 			const apiDump = await getApiDump()
 
 			return apiDump.Enums
-				.map((eenum: IEnum) => new vscode.CompletionItem(
+				.map((eenum: ApiEnum) => new vscode.CompletionItem(
 					eenum.Name
 				))
 		})()
