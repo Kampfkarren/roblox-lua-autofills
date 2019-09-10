@@ -83,19 +83,20 @@ function parseProject(projectFile: string): Project | null {
 interface InstanceMeta {
 	components: Array<string>,
 	path: string,
-	uris: Set<vscode.Uri>,
-	watcher: vscode.FileSystemWatcher,
+	uris: Set<string>,
 }
 
 export class RojoHandler {
 	completionItemProvider: vscode.Disposable
-
+	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
-
 	projects: Map<vscode.Uri, Project> = new Map()
 	projectWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILES_GLOB)
 
 	constructor() {
+		this.fileWatcher.onDidCreate(uri => this.checkCreatedSource(uri))
+		this.fileWatcher.onDidDelete(uri => this.checkDeletedSource(uri))
+
 		this.projectWatcher.onDidCreate(uri => this.checkForProject(uri))
 		this.projectWatcher.onDidChange(uri => this.checkForProject(uri))
 		this.projectWatcher.onDidDelete(uri => this.projects.delete(uri))
@@ -128,8 +129,7 @@ export class RojoHandler {
 							// The initial paths match up with this instance
 
 							for (const uri of instance.uris) {
-								let relativePath = vscode.workspace.asRelativePath(uri)
-									.substr(instance.path.length + 1)
+								let relativePath = uri.substr(instance.path.length + 1)
 
 								const exclude = path.slice(instance.components.length).join("/")
 
@@ -190,17 +190,36 @@ export class RojoHandler {
 		}, ".")
 	}
 
+	async checkCreatedSource(uri: vscode.Uri) {
+		for (const instances of this.instances.values()) {
+			for (const instance of instances) {
+				// normalize the path
+				const normalPath = vscode.workspace.asRelativePath(uri)
+
+				if (normalPath.startsWith(instance.path)) {
+					instance.uris.add(normalPath)
+				}
+			}
+		}
+	}
+
+	async checkDeletedSource(uri: vscode.Uri) {
+		for (const instances of this.instances.values()) {
+			for (const instance of instances) {
+				// normalize the path
+				const normalPath = vscode.workspace.asRelativePath(uri)
+
+				if (normalPath.startsWith(instance.path)) {
+					instance.uris.delete(normalPath)
+				}
+			}
+		}
+	}
+
 	async checkForProject(uri: vscode.Uri) {
 		if (vscode.workspace.asRelativePath(uri).match("/")) {
 			// Project is not in the root, call it off
 			return
-		}
-
-		const currentInstance = this.instances.get(uri)
-		if (currentInstance !== undefined) {
-			for (const meta of currentInstance) {
-				meta.watcher.dispose()
-			}
 		}
 
 		this.instances.delete(uri)
@@ -222,13 +241,8 @@ export class RojoHandler {
 
 	dispose() {
 		this.completionItemProvider.dispose()
+		this.fileWatcher.dispose()
 		this.projectWatcher.dispose()
-
-		for (const metas of this.instances.values()) {
-			for (const meta of metas) {
-				meta.watcher.dispose()
-			}
-		}
 	}
 
 	async populateInstances(
@@ -242,37 +256,19 @@ export class RojoHandler {
 			if (instance.$path !== undefined) {
 				const meta = {
 					components: base.concat(name),
-					uris: new Set<vscode.Uri>(),
+					uris: new Set<string>(),
 				}
 
-				const watcher = vscode.workspace.createFileSystemWatcher(`${instance.$path}/**/**`, undefined, true)
 				const path = instance.$path
 
-				watcher.onDidCreate(uri => {
-					meta.uris.add(
-						uri.with({
-							path: uri.fsPath.substr(path.length)
-						})
-					)
-				})
-
-				watcher.onDidDelete(uri => {
-					meta.uris.delete(
-						uri.with({
-							path: uri.fsPath.substr(path.length)
-						})
-					)
-				})
-
-				walking.push(vscode.workspace.findFiles(`${instance.$path}/**`).then(files => {
+				walking.push(vscode.workspace.findFiles(`${path}/**`).then(files => {
 					for (const file of files) {
-						meta.uris.add(file)
+						meta.uris.add(vscode.workspace.asRelativePath(file))
 					}
 				}))
 
 				metas.push({
 					path,
-					watcher,
 					...meta
 				})
 			}
