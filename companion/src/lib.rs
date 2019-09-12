@@ -10,11 +10,11 @@ pub fn generate_module_dump_js(code: String) -> Option<Array> {
     let output = Array::new();
 
     for (name, member_type) in generate_module_dump(&code).ok()?? {
-		let value = Array::new();
-		value.push(&JsValue::from(name));
-		value.push(&JsValue::from(member_type.to_string()));
+        let value = Array::new();
+        value.push(&JsValue::from(name));
+        value.push(&JsValue::from(member_type.to_string()));
 
-		output.push(&value);
+        output.push(&value);
     }
 
     Some(output)
