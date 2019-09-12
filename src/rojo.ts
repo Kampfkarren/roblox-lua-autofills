@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { TextDecoder } from "util"
+import { generateModuleDump, MemberType } from "./companion"
 
 const INIT_FILE = /(init(\.server|\.client)?\.lua|init\.meta\.json)/
 
@@ -9,6 +10,10 @@ const INIT_FILE = /(init(\.server|\.client)?\.lua|init\.meta\.json)/
 const PROJECT_FILES_GLOB = "**/*.project.json"
 
 const SELECTOR = { scheme: "file", language: "lua" }
+
+function escapeRegex(input: string): string {
+	return input.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+}
 
 interface InstanceDescription {
 	$className?: string,
@@ -88,6 +93,7 @@ interface InstanceMeta {
 
 export class RojoHandler {
 	completionItemProvider: vscode.Disposable
+	fileDumps: Map<string, Exclude<ReturnType<typeof generateModuleDump>, undefined>> = new Map()
 	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
 	projects: Map<vscode.Uri, Project> = new Map()
@@ -95,6 +101,7 @@ export class RojoHandler {
 
 	constructor() {
 		this.fileWatcher.onDidCreate(uri => this.checkCreatedSource(uri))
+		this.fileWatcher.onDidChange(uri => this.checkChangedSource(uri))
 		this.fileWatcher.onDidDelete(uri => this.checkDeletedSource(uri))
 
 		this.projectWatcher.onDidCreate(uri => this.checkForProject(uri))
@@ -104,12 +111,13 @@ export class RojoHandler {
 		this.refreshFilesCache()
 
 		this.completionItemProvider = vscode.languages.registerCompletionItemProvider(SELECTOR, {
-			provideCompletionItems: (document, position) => {
+			provideCompletionItems: async (document, position) => {
 				const line = document.lineAt(position.line).text.substr(0, position.character)
 				const requireMatch = line.match(/require\(([A-Za-z]+)((?:\.[\w]*)+)/)
-				const children: Map<string, vscode.CompletionItemKind> = new Map()
+				const completion: Map<string, vscode.CompletionItem> = new Map()
 
 				if (requireMatch !== null) {
+					const children: Map<string, vscode.CompletionItemKind> = new Map()
 					const service = requireMatch[1]
 					const path = [service, ...requireMatch[2].split(".").slice(1, -1)]
 
@@ -174,28 +182,118 @@ export class RojoHandler {
 							}
 						}
 					}
+
+					for (const [name, kind] of children.entries()) {
+						const completionItem = new vscode.CompletionItem(name, kind)
+						// TODO: Is it possible if it's a folder to append a dot
+						// ...and have it start the next autocomplete?
+						completion.set(name, completionItem)
+					}
+				} else {
+					const variableMatch = line.match(/(\w+)([:.])/)
+
+					if (variableMatch !== null) {
+						const localRequireRegex = new RegExp(
+							`local\\s+${variableMatch[1]}` +
+							/\s*=\s*require\(([\w\.]+)\)/.source,
+						)
+
+						const localRequireMatch = document.getText().match(localRequireRegex)
+
+						if (localRequireMatch !== null) {
+							const path = localRequireMatch[1].split(".")
+
+							for (const instances of this.instances.values()) {
+								nextInstance: for (const instance of instances) {
+									for (const [index, component] of instance.components.entries()) {
+										if (component !== path[index]) {
+											continue nextInstance
+										}
+									}
+
+									const expectingPath = path.slice(instance.components.length)
+									let patternToMatch
+
+									if (expectingPath.length === 0) {
+										patternToMatch = /^init\.lua$/
+									} else {
+										patternToMatch = new RegExp(escapeRegex(expectingPath.join("/")) + /(?:\/init)?\.lua$/.source)
+									}
+
+									for (const uri of instance.uris.values()) {
+										const fileName = uri.substr(instance.path.length + 1)
+
+										if (fileName.match(patternToMatch)) {
+											const dump = this.fileDumps.get(vscode.workspace.asRelativePath(uri))
+											if (dump !== undefined) {
+												for (const [name, memberType] of dump) {
+													if (
+														(memberType === MemberType.Method) !== (variableMatch[2] === ":")
+													) {
+														continue
+													}
+
+													let completionKind: vscode.CompletionItemKind
+													let appendFunction: boolean = false
+
+													switch (memberType) {
+														case MemberType.Function:
+															completionKind = vscode.CompletionItemKind.Function
+															appendFunction = true
+															break
+														case MemberType.Method:
+															completionKind = vscode.CompletionItemKind.Method
+															appendFunction = true
+															break
+														case MemberType.Value:
+															completionKind = vscode.CompletionItemKind.Field
+															break
+														default:
+															throw `invalid member type: ${memberType}`
+													}
+
+													const completionItem = new vscode.CompletionItem(name, completionKind)
+													completionItem.insertText = new vscode.SnippetString(`${name}${appendFunction ? "($0)" : ""}`)
+													completion.set(name, completionItem)
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 
-				const completion = []
-
-				for (const [name, kind] of children.entries()) {
-					const completionItem = new vscode.CompletionItem(name, kind)
-					// TODO: Is it possible if it's a folder to append a dot
-					// ...and have it start the next autocomplete?
-					completion.push(completionItem)
+				const output = []
+				for (const value of completion.values()) {
+					output.push(value)
 				}
-
-				return completion
+				return output
 			}
-		}, ".")
+		}, ".", ":")
+	}
+
+	async updateModuleDump(uri: vscode.Uri) {
+		const normal = vscode.workspace.asRelativePath(uri)
+		if (normal.endsWith(".lua") && !normal.endsWith(".client.lua") && !normal.endsWith(".server.lua")) {
+			const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
+			// console.log(generateModuleDump(contents))
+			const dump = generateModuleDump(contents)
+
+			if (dump !== undefined) {
+				this.fileDumps.set(normal, dump);
+			}
+		}
 	}
 
 	async checkCreatedSource(uri: vscode.Uri) {
+		const normalPath = vscode.workspace.asRelativePath(uri)
+
+		this.updateModuleDump(uri)
+
 		for (const instances of this.instances.values()) {
 			for (const instance of instances) {
-				// normalize the path
-				const normalPath = vscode.workspace.asRelativePath(uri)
-
 				if (normalPath.startsWith(instance.path)) {
 					instance.uris.add(normalPath)
 				}
@@ -203,12 +301,19 @@ export class RojoHandler {
 		}
 	}
 
+	async checkChangedSource(uri: vscode.Uri) {
+		this.updateModuleDump(uri)
+	}
+
 	async checkDeletedSource(uri: vscode.Uri) {
+		const normalPath = vscode.workspace.asRelativePath(uri)
+
+		if (normalPath.endsWith(".lua")) {
+			this.fileDumps.delete(normalPath)
+		}
+
 		for (const instances of this.instances.values()) {
 			for (const instance of instances) {
-				// normalize the path
-				const normalPath = vscode.workspace.asRelativePath(uri)
-
 				if (normalPath.startsWith(instance.path)) {
 					instance.uris.delete(normalPath)
 				}
@@ -263,7 +368,9 @@ export class RojoHandler {
 
 				walking.push(vscode.workspace.findFiles(`${path}/**`).then(files => {
 					for (const file of files) {
-						meta.uris.add(vscode.workspace.asRelativePath(file))
+						const normalPath = vscode.workspace.asRelativePath(file)
+						meta.uris.add(normalPath)
+						this.updateModuleDump(file)
 					}
 				}))
 

@@ -66,12 +66,17 @@ fn members_from_table(
         match field {
             ast::Field::ExpressionKey { key, value, .. } => {
                 if let Some(key) = extract_key_from_brackets(&key) {
-                    map.insert(key, member_type_from_value(&value));
+					if !key.starts_with("__") {
+	                    map.insert(key, member_type_from_value(&value));
+					}
                 }
             }
 
             ast::Field::NameKey { key, value, .. } => {
-                map.insert(key.to_string(), member_type_from_value(&value));
+				let key = key.to_string();
+				if !key.starts_with("__") {
+	                map.insert(key, member_type_from_value(&value));
+				}
             }
 
             _ => {}
@@ -174,8 +179,12 @@ impl Visitor<'static> for MemberVisitor {
             }
         } else if let Some(method_name) = function_name.method_name() {
             // function base_name:method()
-            self.members
-                .insert(method_name.to_string(), MemberType::Method);
+			let method_name = method_name.to_string();
+
+			if !method_name.starts_with("__") {
+				self.members
+					.insert(method_name, MemberType::Method);
+			}
         }
 
         // otheriwse, it's `function base_name()`
