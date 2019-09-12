@@ -6,7 +6,7 @@ import { EnumCompletionProvider } from "./enum"
 import { InstanceCompletionProvider } from "./instance"
 import { RojoHandler } from "./rojo"
 import { ServiceCompletionProvider } from "./services"
-
+require("./companion")
 const SELECTOR = { scheme: "file", language: "lua" }
 
 export async function activate(context: vscode.ExtensionContext) {

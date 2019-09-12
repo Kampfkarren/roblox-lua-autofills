@@ -1,9 +1,9 @@
 // Service member auto complete
 
 import * as vscode from "vscode"
-import { ApiMember, MemberTag, getApiDump } from "./dump"
+import { ApiMember, getApiDump } from "./dump"
 
-const UNSCRIPTABLE_TAGS: Set<MemberTag> = new Set([
+const UNSCRIPTABLE_TAGS: Set<string> = new Set([
 	"Deprecated",
 	"Hidden",
 	"NotBrowsable",

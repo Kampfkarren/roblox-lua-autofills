@@ -18,7 +18,8 @@ impl MemberType {
             MemberType::Method => "Method",
             MemberType::Function => "Function",
             MemberType::Value => "Value",
-        }.to_owned()
+        }
+        .to_owned()
     }
 }
 

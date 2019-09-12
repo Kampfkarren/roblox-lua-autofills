@@ -40,6 +40,6 @@ run_tests! {
     assigned_later,
     assigned_later_as_function,
     no_return,
-	returns_but_nothing,
-	returns_not_table,
+    returns_but_nothing,
+    returns_not_table,
 }
