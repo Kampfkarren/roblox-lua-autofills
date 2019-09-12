@@ -12,6 +12,16 @@ pub enum MemberType {
     Value,
 }
 
+impl MemberType {
+    pub fn to_string(self) -> String {
+        match self {
+            MemberType::Method => "Method",
+            MemberType::Function => "Function",
+            MemberType::Value => "Value",
+        }.to_owned()
+    }
+}
+
 fn extract_key_from_brackets(key: &ast::Expression) -> Option<String> {
     if let ast::Expression::Value { value, .. } = key {
         match **value {
