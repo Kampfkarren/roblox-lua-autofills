@@ -92,6 +92,9 @@ interface InstanceMeta {
 }
 
 export class RojoHandler {
+	allFilesManaged: Promise<void>
+	allFilesManagedResolve: () => void = () => {}
+
 	completionItemProvider: vscode.Disposable
 	fileDumps: Map<string, Exclude<ReturnType<typeof generateModuleDump>, undefined>> = new Map()
 	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
@@ -107,6 +110,8 @@ export class RojoHandler {
 		this.projectWatcher.onDidCreate(uri => this.checkForProject(uri))
 		this.projectWatcher.onDidChange(uri => this.checkForProject(uri))
 		this.projectWatcher.onDidDelete(uri => this.projects.delete(uri))
+
+		this.allFilesManaged = new Promise(resolve => this.allFilesManagedResolve = resolve)
 
 		this.refreshFilesCache()
 
@@ -201,6 +206,8 @@ export class RojoHandler {
 						const localRequireMatch = document.getText().match(localRequireRegex)
 
 						if (localRequireMatch !== null) {
+							await this.allFilesManaged
+
 							const path = localRequireMatch[1].split(".")
 
 							for (const instances of this.instances.values()) {
@@ -278,7 +285,6 @@ export class RojoHandler {
 		const normal = vscode.workspace.asRelativePath(uri)
 		if (normal.endsWith(".lua") && !normal.endsWith(".client.lua") && !normal.endsWith(".server.lua")) {
 			const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
-			// console.log(generateModuleDump(contents))
 			const dump = generateModuleDump(contents)
 
 			if (dump !== undefined) {
@@ -337,9 +343,8 @@ export class RojoHandler {
 			if (project.tree.$className === "DataModel") {
 				this.projects.set(uri, project)
 
-				this.populateInstances(project.tree).then(metas => {
-					this.instances.set(uri, metas)
-				})
+				const metas = await this.populateInstances(project.tree)
+				this.instances.set(uri, metas)
 			}
 		}
 	}
@@ -392,8 +397,12 @@ export class RojoHandler {
 
 	async refreshFilesCache() {
 		const files = await vscode.workspace.findFiles(PROJECT_FILES_GLOB)
+		const waiting = []
+
 		for (const file of files) {
-			this.checkForProject(file)
+			waiting.push(this.checkForProject(file))
 		}
+
+		Promise.all(waiting).then(this.allFilesManagedResolve)
 	}
 }
