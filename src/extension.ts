@@ -9,7 +9,7 @@ import { ServiceCompletionProvider } from "./services"
 const SELECTOR = { scheme: "file", language: "lua" }
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log("roblox-lua-autofills activated")
+    console.log("roblox-lua-autofills activatedd")
 
     let rojoHandler: RojoHandler | undefined
 

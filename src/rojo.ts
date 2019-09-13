@@ -92,10 +92,7 @@ interface InstanceMeta {
 }
 
 export class RojoHandler {
-	allFilesManaged: Promise<void>
-	allFilesManagedResolve: () => void = () => {}
-
-	completionItemProvider: vscode.Disposable
+	completionItemProvider: vscode.Disposable | undefined
 	fileDumps: Map<string, Exclude<ReturnType<typeof generateModuleDump>, undefined>> = new Map()
 	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
@@ -111,157 +108,154 @@ export class RojoHandler {
 		this.projectWatcher.onDidChange(uri => this.checkForProject(uri))
 		this.projectWatcher.onDidDelete(uri => this.projects.delete(uri))
 
-		this.allFilesManaged = new Promise(resolve => this.allFilesManagedResolve = resolve)
+		this.refreshFilesCache().then(() => {
+			console.log("allFilesManaged")
+			this.completionItemProvider = vscode.languages.registerCompletionItemProvider(SELECTOR, {
+				provideCompletionItems: async (document, position) => {
+					const line = document.lineAt(position.line).text.substr(0, position.character)
+					const requireMatch = line.match(/require\(([A-Za-z]+)((?:\.[\w]*)+)/)
+					const completion: Map<string, vscode.CompletionItem> = new Map()
 
-		this.refreshFilesCache()
+					if (requireMatch !== null) {
+						const children: Map<string, vscode.CompletionItemKind> = new Map()
+						const service = requireMatch[1]
+						const path = [service, ...requireMatch[2].split(".").slice(1, -1)]
 
-		this.completionItemProvider = vscode.languages.registerCompletionItemProvider(SELECTOR, {
-			provideCompletionItems: async (document, position) => {
-				const line = document.lineAt(position.line).text.substr(0, position.character)
-				const requireMatch = line.match(/require\(([A-Za-z]+)((?:\.[\w]*)+)/)
-				const completion: Map<string, vscode.CompletionItem> = new Map()
+						for (const instances of this.instances.values()) {
+							nextInstance: for (const instance of instances) {
+								for (const [index, component] of instance.components.entries()) {
+									if (component !== path[index]) {
+										if (index === path.length) {
+											children.set(instance.components[path.length], vscode.CompletionItemKind.Folder)
+										}
 
-				if (requireMatch !== null) {
-					const children: Map<string, vscode.CompletionItemKind> = new Map()
-					const service = requireMatch[1]
-					const path = [service, ...requireMatch[2].split(".").slice(1, -1)]
-
-					for (const instances of this.instances.values()) {
-						nextInstance: for (const instance of instances) {
-							for (const [index, component] of instance.components.entries()) {
-								if (component !== path[index]) {
-									if (index === path.length) {
-										children.set(instance.components[path.length], vscode.CompletionItemKind.Folder)
-									}
-
-									// The thing they're typing starts with a different base than the instance
-									continue nextInstance
-								}
-							}
-
-							// The initial paths match up with this instance
-
-							for (const uri of instance.uris) {
-								let relativePath = uri.substr(instance.path.length + 1)
-
-								const exclude = path.slice(instance.components.length).join("/")
-
-								if (exclude.length > 0) {
-									if (relativePath.startsWith(exclude)) {
-										relativePath = relativePath.slice(exclude.length + 1)
-									} else {
-										continue
+										// The thing they're typing starts with a different base than the instance
+										continue nextInstance
 									}
 								}
 
-								const folderMatch = relativePath.match(/^([^\/]+)\/(.*)/)
-								if (folderMatch !== null) {
-									// This is something inside a folder
-									if (folderMatch[2].match(INIT_FILE)) {
-										// The file is an init script, so this is actually a module
-										children.set(folderMatch[1], vscode.CompletionItemKind.Module)
-									} else {
-										// This is a file inside a folder
-										// If we haven't already established this is a file inside a *module*
-										// Then give it a folder icon
-										if (!children.has(folderMatch[1])) {
-											children.set(folderMatch[1], vscode.CompletionItemKind.Folder)
+								// The initial paths match up with this instance
+
+								for (const uri of instance.uris) {
+									let relativePath = uri.substr(instance.path.length + 1)
+
+									const exclude = path.slice(instance.components.length).join("/")
+
+									if (exclude.length > 0) {
+										if (relativePath.startsWith(exclude)) {
+											relativePath = relativePath.slice(exclude.length + 1)
+										} else {
+											continue
 										}
 									}
-								} else {
-									if (relativePath.match(INIT_FILE) === null) {
-										// We don't want to suggest `.init`
-										const withoutExtension = relativePath.split(".").slice(0, -1).join(".")
 
-										if (relativePath.endsWith(".lua")) {
-											if (!withoutExtension.endsWith(".server")
-												&& !withoutExtension.endsWith(".client")
-											) {
-												children.set(withoutExtension, vscode.CompletionItemKind.Module)
-											}
+									const folderMatch = relativePath.match(/^([^\/]+)\/(.*)/)
+									if (folderMatch !== null) {
+										// This is something inside a folder
+										if (folderMatch[2].match(INIT_FILE)) {
+											// The file is an init script, so this is actually a module
+											children.set(folderMatch[1], vscode.CompletionItemKind.Module)
 										} else {
-											children.set(withoutExtension, vscode.CompletionItemKind.File)
+											// This is a file inside a folder
+											// If we haven't already established this is a file inside a *module*
+											// Then give it a folder icon
+											if (!children.has(folderMatch[1])) {
+												children.set(folderMatch[1], vscode.CompletionItemKind.Folder)
+											}
+										}
+									} else {
+										if (relativePath.match(INIT_FILE) === null) {
+											// We don't want to suggest `.init`
+											const withoutExtension = relativePath.split(".").slice(0, -1).join(".")
+
+											if (relativePath.endsWith(".lua")) {
+												if (!withoutExtension.endsWith(".server")
+													&& !withoutExtension.endsWith(".client")
+												) {
+													children.set(withoutExtension, vscode.CompletionItemKind.Module)
+												}
+											} else {
+												children.set(withoutExtension, vscode.CompletionItemKind.File)
+											}
 										}
 									}
 								}
 							}
 						}
-					}
 
-					for (const [name, kind] of children.entries()) {
-						const completionItem = new vscode.CompletionItem(name, kind)
-						// TODO: Is it possible if it's a folder to append a dot
-						// ...and have it start the next autocomplete?
-						completion.set(name, completionItem)
-					}
-				} else {
-					const variableMatch = line.match(/(\w+)([:.])/)
+						for (const [name, kind] of children.entries()) {
+							const completionItem = new vscode.CompletionItem(name, kind)
+							// TODO: Is it possible if it's a folder to append a dot
+							// ...and have it start the next autocomplete?
+							completion.set(name, completionItem)
+						}
+					} else {
+						const variableMatch = line.match(/(\w+)([:.])/)
 
-					if (variableMatch !== null) {
-						const localRequireRegex = new RegExp(
-							`local\\s+${variableMatch[1]}` +
-							/\s*=\s*require\(([\w\.]+)\)/.source,
-						)
+						if (variableMatch !== null) {
+							const localRequireRegex = new RegExp(
+								`local\\s+${variableMatch[1]}` +
+								/\s*=\s*require\(([\w\.]+)\)/.source,
+							)
 
-						const localRequireMatch = document.getText().match(localRequireRegex)
+							const localRequireMatch = document.getText().match(localRequireRegex)
 
-						if (localRequireMatch !== null) {
-							await this.allFilesManaged
+							if (localRequireMatch !== null) {
+								const path = localRequireMatch[1].split(".")
 
-							const path = localRequireMatch[1].split(".")
-
-							for (const instances of this.instances.values()) {
-								nextInstance: for (const instance of instances) {
-									for (const [index, component] of instance.components.entries()) {
-										if (component !== path[index]) {
-											continue nextInstance
+								for (const instances of this.instances.values()) {
+									nextInstance: for (const instance of instances) {
+										for (const [index, component] of instance.components.entries()) {
+											if (component !== path[index]) {
+												continue nextInstance
+											}
 										}
-									}
 
-									const expectingPath = path.slice(instance.components.length)
-									let patternToMatch
+										const expectingPath = path.slice(instance.components.length)
+										let patternToMatch
 
-									if (expectingPath.length === 0) {
-										patternToMatch = /^init\.lua$/
-									} else {
-										patternToMatch = new RegExp(escapeRegex(expectingPath.join("/")) + /(?:\/init)?\.lua$/.source)
-									}
+										if (expectingPath.length === 0) {
+											patternToMatch = /^init\.lua$/
+										} else {
+											patternToMatch = new RegExp(escapeRegex(expectingPath.join("/")) + /(?:\/init)?\.lua$/.source)
+										}
 
-									for (const uri of instance.uris.values()) {
-										const fileName = uri.substr(instance.path.length + 1)
+										for (const uri of instance.uris.values()) {
+											const fileName = uri.substr(instance.path.length + 1)
 
-										if (fileName.match(patternToMatch)) {
-											const dump = this.fileDumps.get(vscode.workspace.asRelativePath(uri))
-											if (dump !== undefined) {
-												for (const [name, memberType] of dump) {
-													if (
-														(memberType === MemberType.Method) !== (variableMatch[2] === ":")
-													) {
-														continue
+											if (fileName.match(patternToMatch)) {
+												const dump = this.fileDumps.get(vscode.workspace.asRelativePath(uri))
+												if (dump !== undefined) {
+													for (const [name, memberType] of dump) {
+														if (
+															(memberType === MemberType.Method) !== (variableMatch[2] === ":")
+														) {
+															continue
+														}
+
+														let completionKind: vscode.CompletionItemKind
+														let appendFunction: boolean = false
+
+														switch (memberType) {
+															case MemberType.Function:
+																completionKind = vscode.CompletionItemKind.Function
+																appendFunction = true
+																break
+															case MemberType.Method:
+																completionKind = vscode.CompletionItemKind.Method
+																appendFunction = true
+																break
+															case MemberType.Value:
+																completionKind = vscode.CompletionItemKind.Field
+																break
+															default:
+																throw `invalid member type: ${memberType}`
+														}
+
+														const completionItem = new vscode.CompletionItem(name, completionKind)
+														completionItem.insertText = new vscode.SnippetString(`${name}${appendFunction ? "($0)" : ""}`)
+														completion.set(name, completionItem)
 													}
-
-													let completionKind: vscode.CompletionItemKind
-													let appendFunction: boolean = false
-
-													switch (memberType) {
-														case MemberType.Function:
-															completionKind = vscode.CompletionItemKind.Function
-															appendFunction = true
-															break
-														case MemberType.Method:
-															completionKind = vscode.CompletionItemKind.Method
-															appendFunction = true
-															break
-														case MemberType.Value:
-															completionKind = vscode.CompletionItemKind.Field
-															break
-														default:
-															throw `invalid member type: ${memberType}`
-													}
-
-													const completionItem = new vscode.CompletionItem(name, completionKind)
-													completionItem.insertText = new vscode.SnippetString(`${name}${appendFunction ? "($0)" : ""}`)
-													completion.set(name, completionItem)
 												}
 											}
 										}
@@ -270,15 +264,15 @@ export class RojoHandler {
 							}
 						}
 					}
-				}
 
-				const output = []
-				for (const value of completion.values()) {
-					output.push(value)
+					const output = []
+					for (const value of completion.values()) {
+						output.push(value)
+					}
+					return output
 				}
-				return output
-			}
-		}, ".", ":")
+			}, ".", ":")
+		})
 	}
 
 	async updateModuleDump(uri: vscode.Uri) {
@@ -350,7 +344,8 @@ export class RojoHandler {
 	}
 
 	dispose() {
-		this.completionItemProvider.dispose()
+		if (this.completionItemProvider !== undefined)
+			this.completionItemProvider.dispose()
 		this.fileWatcher.dispose()
 		this.projectWatcher.dispose()
 	}
@@ -371,13 +366,14 @@ export class RojoHandler {
 
 				const path = instance.$path
 
-				walking.push(vscode.workspace.findFiles(`${path}/**`).then(files => {
+				// Sigh, not awaiting per file crashes VSC if you type too fast
+				/*walking.push(*/ await vscode.workspace.findFiles(`${path}/**`).then(files => {
 					for (const file of files) {
 						const normalPath = vscode.workspace.asRelativePath(file)
 						meta.uris.add(normalPath)
 						this.updateModuleDump(file)
 					}
-				}))
+				})//)
 
 				metas.push({
 					path,
@@ -403,6 +399,6 @@ export class RojoHandler {
 			waiting.push(this.checkForProject(file))
 		}
 
-		Promise.all(waiting).then(this.allFilesManagedResolve)
+		await Promise.all(waiting)
 	}
 }

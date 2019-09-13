@@ -1,4 +1,4 @@
-import * as companion from "../companion/pkg/companion"
+const companion = require("../companion/pkg/companion")
 
 export enum MemberType {
 	Function = "Function",
