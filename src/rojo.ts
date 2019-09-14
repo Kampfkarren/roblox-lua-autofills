@@ -189,7 +189,7 @@ export class RojoHandler {
 							completion.set(name, completionItem)
 						}
 					} else {
-						const variableMatch = line.match(/(\w+)([:.])/)
+						const variableMatch = line.match(/(\w+)([:.])\w*$/)
 
 						if (variableMatch !== null) {
 							const localRequireRegex = new RegExp(
