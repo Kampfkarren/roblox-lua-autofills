@@ -1,4 +1,5 @@
 import * as cp from "child_process"
+import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
@@ -87,6 +88,15 @@ class RpcCompanion implements ICompanion {
 	async generateModuleDump(code: string): Promise<ModuleDump | null> {
 		return await this.rpcHandler.sendRequest("generate_module_dump", code)
 	}
+
+	static attemptCreate(context: vscode.ExtensionContext, program: string): RpcCompanion | ShimCompanion {
+		if (fs.existsSync(context.asAbsolutePath(path.join("bin", program)))) {
+			return new RpcCompanion(context, program)
+		} else {
+			vscode.window.showWarningMessage("roblox-lua-autofills: Companion does not exist, you need to compile it!")
+			return new ShimCompanion()
+		}
+	}
 }
 
 class ShimCompanion implements ICompanion {
@@ -109,7 +119,7 @@ export class Companion implements vscode.Disposable {
 
 		switch (os.platform()) {
 			case "win32":
-				companion = new RpcCompanion(context, "companion.exe")
+				companion = RpcCompanion.attemptCreate(context, "companion.exe")
 				break
 			default:
 				companion = new ShimCompanion()
