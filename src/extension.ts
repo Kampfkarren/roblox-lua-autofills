@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode"
 import { RobloxColorProvider } from "./color"
+import { Companion } from "./companion"
 import { EnumCompletionProvider } from "./enum"
 import { InstanceCompletionProvider } from "./instance"
 import { RojoHandler } from "./rojo"
@@ -9,7 +10,7 @@ import { ServiceCompletionProvider } from "./services"
 const SELECTOR = { scheme: "file", language: "lua" }
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log("roblox-lua-autofills activatedd")
+    console.log("roblox-lua-autofills activated")
 
     let rojoHandler: RojoHandler | undefined
 
@@ -18,7 +19,9 @@ export async function activate(context: vscode.ExtensionContext) {
     {
         rojoHandler = new RojoHandler()
         context.subscriptions.push(rojoHandler)
-    }
+	}
+
+	context.subscriptions.push(new Companion(context))
 
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration("robloxLuaAutofills.rojo")) {

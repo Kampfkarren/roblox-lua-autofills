@@ -8,7 +8,4 @@ tsconfig.json
 vsc-extension-quickstart.md
 tslint.json
 companion/**
-!companion/pkg/companion.js
-!companion/pkg/companion_bg.js
-!companion/pkg/companion_bg.wasm
 SETUP.md

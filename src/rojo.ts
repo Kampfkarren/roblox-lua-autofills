@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { TextDecoder } from "util"
-import { generateModuleDump, MemberType } from "./companion"
+import { Companion, MemberType, ModuleDump } from "./companion"
 
 const INIT_FILE = /(init(\.server|\.client)?\.lua|init\.meta\.json)/
 
@@ -93,7 +93,7 @@ interface InstanceMeta {
 
 export class RojoHandler {
 	completionItemProvider: vscode.Disposable | undefined
-	fileDumps: Map<string, Exclude<ReturnType<typeof generateModuleDump>, undefined>> = new Map()
+	fileDumps: Map<string, ModuleDump> = new Map()
 	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
 	projects: Map<vscode.Uri, Project> = new Map()
@@ -226,7 +226,7 @@ export class RojoHandler {
 											if (fileName.match(patternToMatch)) {
 												const dump = this.fileDumps.get(vscode.workspace.asRelativePath(uri))
 												if (dump !== undefined) {
-													for (const [name, memberType] of dump) {
+													for (const [name, memberType] of Object.entries(dump)) {
 														if (
 															(memberType === MemberType.Method) !== (variableMatch[2] === ":")
 														) {
@@ -279,10 +279,10 @@ export class RojoHandler {
 		const normal = vscode.workspace.asRelativePath(uri)
 		if (normal.endsWith(".lua") && !normal.endsWith(".client.lua") && !normal.endsWith(".server.lua")) {
 			const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
-			const dump = generateModuleDump(contents)
+			const dump = await Companion.getInstance().generateModuleDump(contents)
 
-			if (dump !== undefined) {
-				this.fileDumps.set(normal, dump);
+			if (dump !== null) {
+				this.fileDumps.set(normal, dump)
 			}
 		}
 	}
@@ -366,14 +366,13 @@ export class RojoHandler {
 
 				const path = instance.$path
 
-				// Sigh, not awaiting per file crashes VSC if you type too fast
-				/*walking.push(*/ await vscode.workspace.findFiles(`${path}/**`).then(files => {
+				walking.push(vscode.workspace.findFiles(`${path}/**`).then(files => {
 					for (const file of files) {
 						const normalPath = vscode.workspace.asRelativePath(file)
 						meta.uris.add(normalPath)
 						this.updateModuleDump(file)
 					}
-				})//)
+				}))
 
 				metas.push({
 					path,
