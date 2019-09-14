@@ -109,7 +109,6 @@ export class RojoHandler {
 		this.projectWatcher.onDidDelete(uri => this.projects.delete(uri))
 
 		this.refreshFilesCache().then(() => {
-			console.log("allFilesManaged")
 			this.completionItemProvider = vscode.languages.registerCompletionItemProvider(SELECTOR, {
 				provideCompletionItems: async (document, position) => {
 					const line = document.lineAt(position.line).text.substr(0, position.character)

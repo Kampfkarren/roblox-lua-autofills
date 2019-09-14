@@ -1,8 +1,7 @@
 import * as cp from "child_process"
+import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
-
-// TODO: Cross platform
 
 export enum MemberType {
 	Function = "Function",
@@ -67,24 +66,17 @@ class RpcHandler {
 	}
 }
 
-export class Companion implements vscode.Disposable {
-	static instance: Companion
+interface ICompanion extends vscode.Disposable {
+	generateModuleDump(code: string): Promise<ModuleDump | null>
+}
+
+class RpcCompanion implements ICompanion {
 	childProcess: cp.ChildProcess
 	rpcHandler: RpcHandler
 
-	constructor(context: vscode.ExtensionContext) {
-		if (Companion.instance !== undefined) {
-			throw new Error("Companion already initialized")
-		}
-
-		this.childProcess = cp.spawn(context.asAbsolutePath(path.join("bin", "companion.exe")))
+	constructor(context: vscode.ExtensionContext, program: string) {
+		this.childProcess = cp.spawn(context.asAbsolutePath(path.join("bin", program)))
 		this.rpcHandler = new RpcHandler(this.childProcess)
-
-		Companion.instance = this
-	}
-
-	static getInstance(): Companion {
-		return Companion.instance
 	}
 
 	dispose() {
@@ -94,5 +86,43 @@ export class Companion implements vscode.Disposable {
 
 	async generateModuleDump(code: string): Promise<ModuleDump | null> {
 		return await this.rpcHandler.sendRequest("generate_module_dump", code)
+	}
+}
+
+class ShimCompanion implements ICompanion {
+	async generateModuleDump(): Promise<ModuleDump | null> {
+		return null
+	}
+
+	dispose() {}
+}
+
+export class Companion implements vscode.Disposable {
+	static instance: ICompanion
+
+	constructor(context: vscode.ExtensionContext) {
+		if (Companion.instance !== undefined) {
+			throw new Error("Companion already initialized")
+		}
+
+		let companion: ICompanion
+
+		switch (os.platform()) {
+			case "win32":
+				companion = new RpcCompanion(context, "companion.exe")
+				break
+			default:
+				companion = new ShimCompanion()
+		}
+
+		Companion.instance = companion
+	}
+
+	static getInstance(): ICompanion {
+		return Companion.instance
+	}
+
+	dispose() {
+		Companion.getInstance().dispose()
 	}
 }
