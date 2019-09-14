@@ -3,6 +3,11 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+- [Added autofill for modules in Rojo projects](https://twitter.com/Kampfkarren/status/1172119087830323200).
+- Fixed a bug with service member autofill appearing when it shouldn't.
+- Service member autofill will no longer show members you can't access.
+
 ## [1.5.0]
 - [Added autofill for service members.](https://twitter.com/Kampfkarren/status/1171544346304245760)
 

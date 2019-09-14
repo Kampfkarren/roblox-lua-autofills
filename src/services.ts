@@ -39,7 +39,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
 	}
 
 	async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-		const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])/)
+		const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])\w*$/)
 
 		if (serviceMatch !== null) {
 			const serviceName = serviceMatch[1]
@@ -51,6 +51,10 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
 				const completionItems = []
 
 				for (const member of serviceMembers) {
+					if (member.Security !== "None") {
+						continue
+					}
+
 					if (syntax === ":") {
 						if (member.MemberType === "Function") {
 							const params = []
