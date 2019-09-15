@@ -94,7 +94,7 @@ interface InstanceMeta {
 export class RojoHandler {
 	completionItemProvider: vscode.Disposable | undefined
 	fileDumps: Map<string, ModuleDump> = new Map()
-	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua", false, true)
+	fileWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher("**/*.lua")
 	instances: Map<vscode.Uri, Array<InstanceMeta>> = new Map()
 	projects: Map<vscode.Uri, Project> = new Map()
 	projectWatcher: vscode.FileSystemWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILES_GLOB)
