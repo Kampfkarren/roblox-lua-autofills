@@ -1,0 +1,25 @@
+name: Companion
+on: [push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Check
+      working-directory: companion
+      run: cargo check --verbose
+    - name: Run tests
+      working-directory: companion
+      run: cargo test --verbose
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build (Windows)
+      working-directory: companion
+      run: cargo build --release --verbose
+    - name: Upload (Windows)
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion
+        path: companion/target/release/companion.exe
