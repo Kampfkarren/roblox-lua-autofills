@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: Build
       working-directory: companion
-      run: cargo build --verbose --release
+      run: cargo check --verbose
     - name: Run tests
       working-directory: companion
       run: cargo test --verbose
