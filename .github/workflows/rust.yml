@@ -1,0 +1,18 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      working-directory: companion
+      run: cargo build --verbose --release
+    - name: Run tests
+      working-directory: companion
+      run: cargo test --verbose
+
