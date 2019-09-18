@@ -15,11 +15,25 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Build (Windows)
+    - name: Build
       working-directory: companion
       run: cargo build --release --verbose
-    - name: Upload (Windows)
+    - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        name: companion
+        name: companion-win64
         path: companion/target/release/companion.exe
+  build_mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Rust
+      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - name: Build
+      working-directory: companion
+      run: cargo build --release --verbose
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion-macos
+        path: companion/target/release/companion
