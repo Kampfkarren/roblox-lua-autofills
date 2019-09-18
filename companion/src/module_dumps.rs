@@ -171,8 +171,7 @@ impl Visitor<'static> for MemberVisitor {
             let method_name = method_name.to_string();
 
             if !method_name.starts_with("__") {
-                self.members
-                    .insert(method_name, MemberType::Method);
+                self.members.insert(method_name, MemberType::Method);
             }
         }
 
@@ -264,11 +263,11 @@ pub fn generate_module_dump(
 
 #[cfg(test)]
 mod tests {
-	use pretty_assertions::assert_eq;
-	use std::collections::BTreeMap;
-	use std::fs;
+    use pretty_assertions::assert_eq;
+    use std::collections::BTreeMap;
+    use std::fs;
 
-	macro_rules! run_tests {
+    macro_rules! run_tests {
 		{
 			$(
 				$module_name: ident,
@@ -299,14 +298,14 @@ mod tests {
 		};
 	}
 
-	run_tests! {
-		assigned_global,
-		assigned_instantly,
-		assigned_instantly_and_later,
-		assigned_later,
-		assigned_later_as_function,
-		no_return,
-		returns_but_nothing,
-		returns_not_table,
-	}
+    run_tests! {
+        assigned_global,
+        assigned_instantly,
+        assigned_instantly_and_later,
+        assigned_later,
+        assigned_later_as_function,
+        no_return,
+        returns_but_nothing,
+        returns_not_table,
+    }
 }
