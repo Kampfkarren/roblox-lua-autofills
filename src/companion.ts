@@ -121,6 +121,9 @@ export class Companion implements vscode.Disposable {
             case "win32":
                 companion = RpcCompanion.attemptCreate(context, "companion.exe")
                 break
+            case "darwin":
+                companion = RpcCompanion.attemptCreate(context, "companion-osx")
+                break
             default:
                 companion = new ShimCompanion()
         }
