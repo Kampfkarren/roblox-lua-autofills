@@ -1,109 +1,113 @@
 // Service member auto complete
 
 import * as vscode from "vscode"
-import { ApiMember, MemberTag, getApiDump } from "./dump"
+import { ApiMember, getApiDump } from "./dump"
 
-const UNSCRIPTABLE_TAGS: Set<MemberTag> = new Set([
-	"Deprecated",
-	"Hidden",
-	"NotBrowsable",
-	"NotScriptable",
+const UNSCRIPTABLE_TAGS: Set<string> = new Set([
+    "Deprecated",
+    "Hidden",
+    "NotBrowsable",
+    "NotScriptable",
 ])
 
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
-	serviceMembers: Promise<Map<string, Array<ApiMember>>>
+    serviceMembers: Promise<Map<string, Array<ApiMember>>>
 
-	constructor() {
-		this.serviceMembers = getApiDump().then(dump => {
-			const output = new Map()
+    constructor() {
+        this.serviceMembers = getApiDump().then(dump => {
+            const output = new Map()
 
-			for (const klass of dump.Classes) {
-				if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
-					output.set(klass.Name, klass.Members.filter((member) => {
-						const tags = member.Tags
-						if (tags !== undefined) {
-							for (const tag of tags) {
-								if (UNSCRIPTABLE_TAGS.has(tag)) {
-									return false
-								}
-							}
-						}
+            for (const klass of dump.Classes) {
+                if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
+                    output.set(klass.Name, klass.Members.filter((member) => {
+                        const tags = member.Tags
+                        if (tags !== undefined) {
+                            for (const tag of tags) {
+                                if (UNSCRIPTABLE_TAGS.has(tag)) {
+                                    return false
+                                }
+                            }
+                        }
 
-						return true
-					}))
-				}
-			}
+                        return true
+                    }))
+                }
+            }
 
-			return output
-		})
-	}
+            return output
+        })
+    }
 
-	async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-		const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])/)
+    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+        const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])\w*$/)
 
-		if (serviceMatch !== null) {
-			const serviceName = serviceMatch[1]
-			const syntax = serviceMatch[2]
+        if (serviceMatch !== null) {
+            const serviceName = serviceMatch[1]
+            const syntax = serviceMatch[2]
 
-			const serviceMembers = (await this.serviceMembers).get(serviceName)
+            const serviceMembers = (await this.serviceMembers).get(serviceName)
 
-			if (serviceMembers !== undefined) {
-				const completionItems = []
+            if (serviceMembers !== undefined) {
+                const completionItems = []
 
-				for (const member of serviceMembers) {
-					if (syntax === ":") {
-						if (member.MemberType === "Function") {
-							const params = []
+                for (const member of serviceMembers) {
+                    if (member.Security !== "None") {
+                        continue
+                    }
 
-							for (const param of member.Parameters) {
-								let paramText = param.Name
+                    if (syntax === ":") {
+                        if (member.MemberType === "Function") {
+                            const params = []
 
-								if (param.Default !== undefined) {
-									paramText += ` = ${param.Default}`
-								}
+                            for (const param of member.Parameters) {
+                                let paramText = param.Name
 
-								params.push(paramText)
-							}
+                                if (param.Default !== undefined) {
+                                    paramText += ` = ${param.Default}`
+                                }
 
-							const completionItem = new vscode.CompletionItem(
-								`${member.Name}(${params.join(", ")})`,
-								vscode.CompletionItemKind.Method,
-							)
+                                params.push(paramText)
+                            }
 
-							completionItem.insertText = new vscode.SnippetString(`${member.Name}($0)`)
+                            const completionItem = new vscode.CompletionItem(
+                                `${member.Name}(${params.join(", ")})`,
+                                vscode.CompletionItemKind.Method,
+                            )
 
-							completionItems.push(completionItem)
-						}
-					} else {
-						switch (member.MemberType) {
-							case "Callback":
-								completionItems.push(new vscode.CompletionItem(
-									member.Name,
-									vscode.CompletionItemKind.Constructor,
-								))
-								break
+                            completionItem.insertText = new vscode.SnippetString(`${member.Name}($0)`)
 
-							case "Event":
-								completionItems.push(new vscode.CompletionItem(
-									member.Name,
-									vscode.CompletionItemKind.Event,
-								))
-								break
+                            completionItems.push(completionItem)
+                        }
+                    } else {
+                        switch (member.MemberType) {
+                            case "Callback":
+                                completionItems.push(new vscode.CompletionItem(
+                                    member.Name,
+                                    vscode.CompletionItemKind.Constructor,
+                                ))
+                                break
 
-							case "Property":
-								completionItems.push(new vscode.CompletionItem(
-									member.Name,
-									vscode.CompletionItemKind.Field,
-								))
-								break
-						}
-					}
-				}
+                            case "Event":
+                                completionItems.push(new vscode.CompletionItem(
+                                    member.Name,
+                                    vscode.CompletionItemKind.Event,
+                                ))
+                                break
 
-				return completionItems
-			}
-		}
+                            case "Property":
+                                completionItems.push(new vscode.CompletionItem(
+                                    member.Name,
+                                    vscode.CompletionItemKind.Field,
+                                ))
+                                break
+                        }
+                    }
+                }
 
-		return []
-	}
+                return completionItems
+            }
+        }
+
+        return []
+    }
 }

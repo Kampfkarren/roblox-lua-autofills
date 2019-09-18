@@ -1,0 +1,41 @@
+name: Companion
+on: [push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Check
+      working-directory: companion
+      run: cargo check --verbose
+    - name: Run tests
+      working-directory: companion
+      run: cargo test --verbose
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      working-directory: companion
+      run: cargo build --release --verbose
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion-win64
+        path: companion/target/release/companion.exe
+  build_mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Rust
+      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - name: Build
+      working-directory: companion
+      run: |
+        source $HOME/.cargo/env
+        cargo build --release --verbose
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion-macos
+        path: companion/target/release/companion
