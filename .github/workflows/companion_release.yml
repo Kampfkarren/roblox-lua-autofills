@@ -11,8 +11,9 @@ jobs:
     - name: Sign
       env:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        SECRET_PASS: ${{ secrets.SECRET_PASS }}
       run: |
-        echo $SECRET_KEY > private.pem
+        echo "$SECRET_KEY" > private.pem
         openssl dgst -sha256 -sign private.pem -passin "pass:$SECRET_PASS" -out companion.exe.sig companion/target/release/companion.exe
     - name: Prepare Upload
       run: |
@@ -38,8 +39,9 @@ jobs:
     - name: Sign
       env:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        SECRET_PASS: ${{ secrets.SECRET_PASS }}
       run: |
-        echo $SECRET_KEY > private.pem
+        echo "$SECRET_KEY" > private.pem
         openssl dgst -sha256 -sign private.pem -passin "pass:$SECRET_PASS" -out companion.sig companion/target/release/companion
     - name: Prepare Upload
       run: |
