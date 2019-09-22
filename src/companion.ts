@@ -1,7 +1,9 @@
+import * as crypto from "crypto"
 import * as cp from "child_process"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
+import { promisify } from "util"
 import * as vscode from "vscode"
 
 export enum MemberType {
@@ -89,11 +91,37 @@ class RpcCompanion implements ICompanion {
         return await this.rpcHandler.sendRequest("generate_module_dump", code)
     }
 
-    static attemptCreate(context: vscode.ExtensionContext, program: string): RpcCompanion | ShimCompanion {
-        if (fs.existsSync(context.asAbsolutePath(path.join("bin", program)))) {
+    static async attemptCreate(context: vscode.ExtensionContext, program: string): Promise<RpcCompanion | ShimCompanion> {
+        const stat = promisify(fs.stat)
+        const app = context.asAbsolutePath(path.join("bin", program))
+
+        const readFile = promisify(fs.readFile)
+
+        const pem = context.asAbsolutePath(path.join("bin", "public.pem"))
+        const sig = context.asAbsolutePath(path.join("bin", `${program}.sig`))
+
+        await Promise.all([
+            stat(app).catch(() => Promise.resolve("Companion does not exist, you need to compile it!")),
+            stat(pem).catch(() => Promise.resolve("Public key for companion does not exist!")),
+            stat(sig).catch(() => Promise.resolve("Companion signature does not exist!")),
+        ]).catch((error: string) => {
+            vscode.window.showWarningMessage(`roblox-lua-autofills: ${error}`)
+            return new ShimCompanion()
+        })
+
+        const verify = crypto.createVerify("SHA256")
+        verify.write(await readFile(app))
+        verify.end()
+
+        const [pemContents, sigContents] = await Promise.all([
+            readFile(pem),
+            readFile(sig),
+        ])
+
+        if (verify.verify(pemContents, sigContents)) {
             return new RpcCompanion(context, program)
         } else {
-            vscode.window.showWarningMessage("roblox-lua-autofills: Companion does not exist, you need to compile it!")
+            vscode.window.showWarningMessage("roblox-lua-autofills: Signature verification of companion failed!")
             return new ShimCompanion()
         }
     }
@@ -108,14 +136,14 @@ class ShimCompanion implements ICompanion {
 }
 
 export class Companion implements vscode.Disposable {
-    static instance: ICompanion
+    static instance: Promise<ICompanion>
 
     constructor(context: vscode.ExtensionContext) {
         if (Companion.instance !== undefined) {
             throw new Error("Companion already initialized")
         }
 
-        let companion: ICompanion
+        let companion: Promise<ICompanion>
 
         switch (os.platform()) {
             case "win32":
@@ -125,17 +153,17 @@ export class Companion implements vscode.Disposable {
                 companion = RpcCompanion.attemptCreate(context, "companion-osx")
                 break
             default:
-                companion = new ShimCompanion()
+                companion = Promise.resolve(new ShimCompanion())
         }
 
         Companion.instance = companion
     }
 
-    static getInstance(): ICompanion {
+    static getInstance(): Promise<ICompanion> {
         return Companion.instance
     }
 
     dispose() {
-        Companion.getInstance().dispose()
+        Companion.getInstance().then(x => x.dispose)
     }
 }
