@@ -95,13 +95,23 @@ class RpcCompanion implements ICompanion {
         const stat = promisify(fs.stat)
         const app = context.asAbsolutePath(path.join("bin", program))
 
+        if (process.env["ROBLOX_LUA_AUTOFILLS_DEVELOPMENT"] === "true") {
+            vscode.window.showWarningMessage("roblox-lua-autofills: Development mode, skipping companion signature check!")
+            stat(app).then(() => {
+                return new RpcCompanion(context, program)
+            }).catch(() => {
+                vscode.window.showWarningMessage("roblox-lua-autofills: Companion does not exist! You need to compile it!")
+                return new ShimCompanion()
+            })
+        }
+
         const readFile = promisify(fs.readFile)
 
         const pem = context.asAbsolutePath(path.join("bin", "public.pem"))
         const sig = context.asAbsolutePath(path.join("bin", `${program}.sig`))
 
         await Promise.all([
-            stat(app).catch(() => Promise.resolve("Companion does not exist, you need to compile it!")),
+            stat(app).catch(() => Promise.resolve("Companion does not exist!")),
             stat(pem).catch(() => Promise.resolve("Public key for companion does not exist!")),
             stat(sig).catch(() => Promise.resolve("Companion signature does not exist!")),
         ]).catch((error: string) => {
