@@ -278,7 +278,7 @@ export class RojoHandler {
         const normal = vscode.workspace.asRelativePath(uri)
         if (normal.endsWith(".lua") && !normal.endsWith(".client.lua") && !normal.endsWith(".server.lua")) {
             const contents = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri))
-            const dump = await Companion.getInstance().generateModuleDump(contents)
+            const dump = await (await Companion.getInstance()).generateModuleDump(contents)
 
             if (dump !== null) {
                 this.fileDumps.set(normal, dump)

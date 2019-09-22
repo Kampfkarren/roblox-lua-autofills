@@ -13,6 +13,9 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
+            "env": {
+                "ROBLOX_LUA_AUTOFILLS_DEVELOPMENT": "true"
+            },
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
@@ -27,6 +30,9 @@
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/out/test"
             ],
+            "env": {
+                "ROBLOX_LUA_AUTOFILLS_DEVELOPMENT": "true"
+            },
             "outFiles": [
                 "${workspaceFolder}/out/test/**/*.js"
             ],

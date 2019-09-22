@@ -1,0 +1,56 @@
+name: Companion (Release)
+on: [push]
+jobs:
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      working-directory: companion
+      run: cargo build --release --verbose
+    - name: Sign
+      env:
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        SECRET_PASS: ${{ secrets.SECRET_PASS }}
+      run: |
+        $env:SECRET_KEY | Out-File private.pem -Encoding UTF8
+        openssl dgst -sha256 -sign private.pem -keyform PEM -passin "pass:$env:SECRET_PASS" -out companion.exe.sig companion/target/release/companion.exe
+      shell: pwsh
+    - name: Prepare Upload
+      run: |
+        mkdir release
+        mv companion/target/release/companion.exe release
+        mv companion.exe.sig release
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion-win64
+        path: release
+  build_mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Rust
+      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - name: Build
+      working-directory: companion
+      run: |
+        source $HOME/.cargo/env
+        cargo build --release --verbose
+    - name: Sign
+      env:
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        SECRET_PASS: ${{ secrets.SECRET_PASS }}
+      run: |
+        echo "$SECRET_KEY" > private.pem
+        openssl dgst -sha256 -sign private.pem -passin "pass:$SECRET_PASS" -out companion.sig companion/target/release/companion
+    - name: Prepare Upload
+      run: |
+        mkdir release
+        mv companion/target/release/companion release
+        mv companion.sig release
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: companion-macos
+        path: release
