@@ -3,4 +3,5 @@ node_modules
 .vscode-test/
 *.vsix
 yarn-error.log
-bin/
+bin/**
+!bin/public.pem
