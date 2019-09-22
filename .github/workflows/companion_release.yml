@@ -13,7 +13,7 @@ jobs:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
       run: |
         echo $SECRET_KEY > private.pem
-        openssl dgst -sha256 -sign private.pem -out companion.exe.sig companion/target/release/companion.exe
+        openssl dgst -sha256 -sign private.pem -passin "pass:$SECRET_PASS" -out companion.exe.sig companion/target/release/companion.exe
     - name: Prepare Upload
       run: |
         mkdir release
@@ -40,14 +40,14 @@ jobs:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
       run: |
         echo $SECRET_KEY > private.pem
-        openssl dgst -sha256 -sign private.pem -out companion.exe.sig companion/target/release/companion.exe
+        openssl dgst -sha256 -sign private.pem -passin "pass:$SECRET_PASS" -out companion.sig companion/target/release/companion
     - name: Prepare Upload
       run: |
         mkdir release
-        mv companion/target/release/companion.exe release
-        mv companion.exe.sig release
+        mv companion/target/release/companion release
+        mv companion.sig release
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        name: companion-win64
+        name: companion-macos
         path: release
