@@ -13,7 +13,7 @@ jobs:
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
         SECRET_PASS: ${{ secrets.SECRET_PASS }}
       run: |
-        $env:SECRET_KEY | Out-File private.pem
+        $env:SECRET_KEY | Out-File private.pem -Encoding UTF8
         openssl dgst -sha256 -sign private.pem -keyform PEM -passin "pass:$env:SECRET_PASS" -out companion.exe.sig companion/target/release/companion.exe
       shell: powershell
     - name: Prepare Upload
