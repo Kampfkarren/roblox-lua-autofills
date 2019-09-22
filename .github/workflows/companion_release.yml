@@ -15,7 +15,7 @@ jobs:
       run: |
         $env:SECRET_KEY | Out-File private.pem -Encoding UTF8
         openssl dgst -sha256 -sign private.pem -keyform PEM -passin "pass:$env:SECRET_PASS" -out companion.exe.sig companion/target/release/companion.exe
-      shell: powershell
+      shell: pwsh
     - name: Prepare Upload
       run: |
         mkdir release
