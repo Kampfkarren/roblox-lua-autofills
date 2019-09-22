@@ -1,0 +1,13 @@
+name: Companion (Check)
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Check
+      working-directory: companion
+      run: cargo check --verbose
+    - name: Run tests
+      working-directory: companion
+      run: cargo test --verbose
