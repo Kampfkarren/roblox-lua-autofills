@@ -10,6 +10,8 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "NotScriptable",
 ])
 
+const IMPORT_PATTERN = /^local \w+ = game:GetService\("\w+"\)\s*$/
+
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
     serviceMembers: Promise<Map<string, Array<ApiMember>>>
 
@@ -39,15 +41,57 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
     }
 
     async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-        const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])\w*$/)
+        const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.]?)\w*$/)
 
         if (serviceMatch !== null) {
             const serviceName = serviceMatch[1]
-            const syntax = serviceMatch[2]
+            const operator = serviceMatch[2]
 
             const serviceMembers = (await this.serviceMembers).get(serviceName)
 
             if (serviceMembers !== undefined) {
+                const documentText = document.getText()
+
+                if (!documentText.match(new RegExp(`^local ${serviceName} = `, "m"))) {
+                    const insertText = `local ${serviceName} = game:GetService("${serviceName}")\n`
+                    const lines = documentText.split(/\n\r?/)
+
+                    const firstImport = lines.findIndex(line => line.match(IMPORT_PATTERN))
+                    let lineNumber = Math.max(firstImport, 0)
+
+                    while (lineNumber < lines.length) {
+                        if (
+                            !lines[lineNumber].match(IMPORT_PATTERN)
+                            || lines[lineNumber] > insertText
+                        ) {
+                            break
+                        }
+                        lineNumber++
+                    }
+
+                    const item = new vscode.CompletionItem(
+                        serviceName,
+                        vscode.CompletionItemKind.Class,
+                    )
+
+                    item.additionalTextEdits = [
+                        vscode.TextEdit.insert(
+                            new vscode.Position(lineNumber, 0),
+                            insertText + (firstImport === -1 ? "\n" : ""),
+                        )
+                    ]
+
+                    if (operator !== "") {
+                        item.command = { command: "editor.action.triggerSuggest", title: "Re-trigger completions" }
+                    }
+
+                    item.detail = "Auto-import service"
+                    item.insertText = operator ? "" : serviceName
+                    item.preselect = true
+
+                    return [item]
+                }
+
                 const completionItems = []
 
                 for (const member of serviceMembers) {
@@ -55,7 +99,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                         continue
                     }
 
-                    if (syntax === ":") {
+                    if (operator === ":") {
                         if (member.MemberType === "Function") {
                             const params = []
 
@@ -78,7 +122,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
 
                             completionItems.push(completionItem)
                         }
-                    } else {
+                    } else if (operator === ".") {
                         switch (member.MemberType) {
                             case "Callback":
                                 completionItems.push(new vscode.CompletionItem(
