@@ -3,13 +3,11 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-<<<<<<< HEAD
+## [1.7.0]
+- [Added service auto-importing](https://twitter.com/evaeraevaera/status/1180032597377851393)
+
 ## [1.6.1]
 - Extension companion executable is now both signed and self-verified in the extension.
-=======
-## [Unreleased]
-- [Added service auto-importing](https://twitter.com/evaeraevaera/status/1180032597377851393)
->>>>>>> 5494a43ca68dffad1a263c165d69ad91e6d5b90e
 
 ## [1.6.0]
 - [Added autofill for modules in Rojo projects](https://twitter.com/Kampfkarren/status/1172119087830323200).
