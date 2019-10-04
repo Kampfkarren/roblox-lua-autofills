@@ -10,6 +10,8 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "NotScriptable",
 ])
 
+const IMPORT_PATTERN = /^local \w+ = game:GetService\("\w+"\)\s*$/
+
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
     serviceMembers: Promise<Map<string, Array<ApiMember>>>
 
@@ -48,15 +50,33 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
             const serviceMembers = (await this.serviceMembers).get(serviceName)
 
             if (serviceMembers !== undefined) {
-                if (!document.getText().match(new RegExp(`^local ${serviceName} = `))) {
+                const documentText = document.getText()
+
+                if (!documentText.match(new RegExp(`^local ${serviceName} = `))) {
+                    const insertText = `local ${serviceName} = game:GetService("${serviceName}")\n`
+                    const lines = documentText.split(/\n\r?/)
+
+                    const firstImport = lines.findIndex(line => line.match(IMPORT_PATTERN))
+                    let lineNumber = Math.max(firstImport, 0)
+
+                    while (lineNumber < lines.length) {
+                        if (
+                            !lines[lineNumber].match(IMPORT_PATTERN)
+                            || lines[lineNumber] > insertText
+                        ) {
+                            break
+                        }
+                        lineNumber++
+                    }
+
                     const item = new vscode.CompletionItem(
                         serviceName,
                         vscode.CompletionItemKind.Class,
                     )
                     item.additionalTextEdits = [
                         vscode.TextEdit.insert(
-                            new vscode.Position(0, 0),
-                            `local ${serviceName} = game:GetService("${serviceName}")\n`
+                            new vscode.Position(lineNumber, 0),
+                            insertText + (firstImport === -1 ? "\n" : ""),
                         )
                     ]
                     item.detail = "Auto-import service"
