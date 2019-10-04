@@ -7,3 +7,4 @@ Currently supports:
 - Instance.new auto fill
 - Rojo "require" auto fill
 - Service member auto fill
+- Service auto-import
