@@ -39,15 +39,33 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
     }
 
     async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-        const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.])\w*$/)
+        const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.]?)\w*$/)
 
         if (serviceMatch !== null) {
             const serviceName = serviceMatch[1]
-            const syntax = serviceMatch[2]
+            const operator = serviceMatch[2]
 
             const serviceMembers = (await this.serviceMembers).get(serviceName)
 
             if (serviceMembers !== undefined) {
+                if (!document.getText().match(new RegExp(`^local ${serviceName} = `))) {
+                    const item = new vscode.CompletionItem(
+                        serviceName,
+                        vscode.CompletionItemKind.Class,
+                    )
+                    item.additionalTextEdits = [
+                        vscode.TextEdit.insert(
+                            new vscode.Position(0, 0),
+                            `local ${serviceName} = game:GetService("${serviceName}")\n`
+                        )
+                    ]
+                    item.detail = "Auto-import service"
+                    item.preselect = true
+                    item.insertText = operator ? "" : serviceName
+
+                    return [item]
+                }
+
                 const completionItems = []
 
                 for (const member of serviceMembers) {
@@ -55,7 +73,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                         continue
                     }
 
-                    if (syntax === ":") {
+                    if (operator === ":") {
                         if (member.MemberType === "Function") {
                             const params = []
 
