@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.7.1]
+- Service auto-importer will now suggest for non-idiomatic whitespace in service declarations.
+
 ## [1.7.0]
 - [Added service auto-importing](https://twitter.com/evaeraevaera/status/1180035299453349889)
 
