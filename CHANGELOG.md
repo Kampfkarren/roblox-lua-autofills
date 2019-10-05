@@ -4,7 +4,7 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 ## [1.7.0]
-- [Added service auto-importing](https://twitter.com/evaeraevaera/status/1180032597377851393)
+- [Added service auto-importing](https://twitter.com/evaeraevaera/status/1180035299453349889)
 
 ## [1.6.1]
 - Extension companion executable is now both signed and self-verified in the extension.
