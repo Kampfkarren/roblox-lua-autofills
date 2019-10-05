@@ -52,7 +52,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
             if (serviceMembers !== undefined) {
                 const documentText = document.getText()
 
-                if (!documentText.match(new RegExp(`^local ${serviceName} = `, "m"))) {
+                if (!documentText.match(new RegExp(`^local ${serviceName}\\s*=\\s*`, "m"))) {
                     const insertText = `local ${serviceName} = game:GetService("${serviceName}")\n`
                     const lines = documentText.split(/\n\r?/)
 
