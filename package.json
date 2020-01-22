@@ -2,6 +2,7 @@
     "name": "roblox-lua-autofills",
     "displayName": "Roblox Lua Autocompletes",
     "description": "Autocompletes for Roblox Lua.",
+    "license": "MPL-2.0",
     "version": "1.7.1",
     "publisher": "Kampfkarren",
     "repository": "https://github.com/Kampfkarren/roblox-lua-autofills",
@@ -26,12 +27,10 @@
                 }
             }
         },
-        "snippets": [
-            {
-                "language": "lua",
-                "path": "./snippets.json"
-            }
-        ]
+        "snippets": [{
+            "language": "lua",
+            "path": "./snippets.json"
+        }]
     },
     "main": "./out/extension",
     "scripts": {
