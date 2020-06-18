@@ -13,7 +13,7 @@ export class LuaLibraryCompletionProvider implements vscode.CompletionItemProvid
                 luaLibrary[library.name] = [
                     ...library.properties.map((property) => {
                         const item = new vscode.CompletionItem(property.name, vscode.CompletionItemKind.Field)
-                        item.detail = property.type
+                        item.detail = `(property) ${library.name}.${property.name}: ${property.type}`
                         item.documentation = new vscode.MarkdownString(`${property.description ? property.description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/lua-docs/${library.name})`)
                         return item
                     }),
