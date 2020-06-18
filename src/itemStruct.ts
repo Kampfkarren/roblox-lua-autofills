@@ -40,7 +40,13 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
 
         this.itemStructNames = (async () => {
             const autocompleteDump = await getAutocompleteDump()
-            return autocompleteDump.ItemStruct.map(
+            return autocompleteDump.ItemStruct.filter(
+                (itemStruct) => {
+                    return itemStruct.functions.filter(
+                        (func) => func.static,
+                    ).length > 0 || itemStruct.properties.filter((property) => property.static).length > 0
+                },
+            ).map(
                 (itemStruct) => new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class),
             )
         })()
