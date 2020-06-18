@@ -51,6 +51,10 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
             for (const klass of dump.Classes) {
                 if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
                     const completionItem = new vscode.CompletionItem(klass.Name, vscode.CompletionItemKind.Class)
+
+                    completionItem.detail = `(service) ${klass.Name}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/class/${klass.Name})`)
+
                     output.push(completionItem)
                 }
             }
@@ -81,46 +85,69 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     const params = []
 
                     for (const param of member.Parameters) {
-                        let paramText = param.Name
-
-                        if (param.Default !== undefined) {
-                            paramText += ` = ${param.Default}`
-                        }
-
+                        const paramText = `${param.Name}${param.Default ? "?" : ""}: ${param.Type ? param.Type.Name : "unknown"}${param.Default ? ` = ${param.Default}` : ""}`
                         params.push(paramText)
                     }
 
                     const completionItem = new vscode.CompletionItem(
-                        `${member.Name}(${params.join(", ")})`,
+                        member.Name,
                         vscode.CompletionItemKind.Method,
                     )
 
+                    completionItem.detail = `(function) ${service.Name}:${member.Name}(${params.join(", ")}): ${member.ReturnType ? member.ReturnType.Name : "unknown"}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/function/${service.Name}/${member.Name})`)
                     completionItem.insertText = new vscode.SnippetString(`${member.Name}($0)`)
 
                     completionItems.push(completionItem)
                 }
             } else if (operator === ".") {
                 switch (member.MemberType) {
-                    case "Callback":
-                        completionItems.push(new vscode.CompletionItem(
+                    case "Callback": {
+                        const params = []
+
+                        for (const param of member.Parameters) {
+                            const paramText = `${param.Name}: ${param.Type ? param.Type.Name : "unknown"}`
+                            params.push(paramText)
+                        }
+
+                        const completionItem = new vscode.CompletionItem(
                             member.Name,
                             vscode.CompletionItemKind.Constructor,
-                        ))
-                        break
+                        )
+                        completionItem.detail = `(callback) ${service.Name}.${member.Name} = function (${params.join(", ")})`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/callback/${service.Name}/${member.Name})`)
 
-                    case "Event":
-                        completionItems.push(new vscode.CompletionItem(
+                        completionItems.push(completionItem)
+                        break
+                    }
+                    case "Event": {
+                        const params = []
+
+                        for (const param of member.Parameters) {
+                            const paramText = `${param.Name}: ${param.Type ? param.Type.Name : "unknown"}`
+                            params.push(paramText)
+                        }
+
+                        const completionItem = new vscode.CompletionItem(
                             member.Name,
                             vscode.CompletionItemKind.Event,
-                        ))
-                        break
+                        )
+                        completionItem.detail = `(event) ${service.Name}.${member.Name}(${params.join(", ")})`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/property/${service.Name}/${member.Name})`)
 
-                    case "Property":
-                        completionItems.push(new vscode.CompletionItem(
+                        completionItems.push(completionItem)
+                        break
+                    }
+                    case "Property": {
+                        const completionItem = new vscode.CompletionItem(
                             member.Name,
                             vscode.CompletionItemKind.Field,
-                        ))
+                        )
+                        completionItem.detail = `(property) ${service.Name}.${member.Name}: ${member.ValueType ? member.ValueType.Name : "unknown"}`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/event/${service.Name}/${member.Name})`)
+                        completionItems.push(completionItem)
                         break
+                    }
                 }
             }
         }
@@ -130,7 +157,11 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                 const klass = (await this.serviceMembers).get(service.Superclass)
                 if (klass) {
                     const inheritedMembers = await this.createCompletionItems(klass, operator, true)
-                    // TODO: Indicate in the completion that this is inherited
+                    for (const completionItem of inheritedMembers) {
+                        if (completionItem.documentation) {
+                            (completionItem.documentation as vscode.MarkdownString).value = `Inherited from ${service.Superclass}\n\n${(completionItem.documentation as vscode.MarkdownString).value}`
+                        }
+                    }
                     completionItems = completionItems.concat(inheritedMembers)
                 }
             }
