@@ -1,7 +1,7 @@
 // Service member auto complete
 
 import * as vscode from "vscode"
-import { ApiClass, getApiDump } from "./dump"
+import { ApiClass, ApiPropertySecurity, getApiDump } from "./dump"
 
 const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "Deprecated",
@@ -53,7 +53,12 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
         let completionItems: vscode.CompletionItem[] = []
 
         for (const member of service.Members) {
-            if (member.Security !== "None") {
+            if (member.MemberType === "Property") {
+                const security = member.Security as ApiPropertySecurity
+                if (security.Read !== "None" && security.Write !== "None") {
+                    continue
+                }
+            } else if (member.Security !== "None") {
                 continue
             }
 
