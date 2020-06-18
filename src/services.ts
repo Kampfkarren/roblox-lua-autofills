@@ -14,6 +14,7 @@ const IMPORT_PATTERN = /^local \w+ = game:GetService\("\w+"\)\s*$/
 
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
     public serviceMembers: Promise<Map<string, ApiClass>>
+    public servicesCompletion: Promise<vscode.CompletionItem[]>
 
     constructor() {
         this.serviceMembers = getApiDump().then((dump) => {
@@ -39,6 +40,19 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     Tags: klass.Tags,
                 }
                 output.set(klass.Name, klassData)
+            }
+
+            return output
+        })
+
+        this.servicesCompletion = getApiDump().then((dump) => {
+            const output: vscode.CompletionItem[] = []
+
+            for (const klass of dump.Classes) {
+                if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
+                    const completionItem = new vscode.CompletionItem(klass.Name, vscode.CompletionItemKind.Class)
+                    output.push(completionItem)
+                }
             }
 
             return output
@@ -180,6 +194,8 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                 const completionItems = await this.createCompletionItems(service, operator, true)
 
                 return completionItems
+            } else {
+                return this.servicesCompletion
             }
         }
 
