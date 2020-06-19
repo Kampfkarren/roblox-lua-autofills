@@ -2,9 +2,9 @@ import * as vscode from "vscode"
 import { ApiEnum, getApiDump } from "./dump"
 
 export class EnumCompletionProvider implements vscode.CompletionItemProvider {
-    public enumItems: Promise<vscode.CompletionItem[]>
-    public enumNamesAndItems: Promise<{ [name: string]: vscode.CompletionItem[] }>
-    public enumProperties = [
+    enumItems: Promise<vscode.CompletionItem[]>
+    enumNamesAndItems: Promise<{ [name: string]: vscode.CompletionItem[] }>
+    enumProperties = [
         new vscode.CompletionItem("Name", vscode.CompletionItemKind.Field),
         new vscode.CompletionItem("Value", vscode.CompletionItemKind.Field),
     ]
@@ -33,7 +33,7 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
         })()
     }
 
-    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
         const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/[^\w\.]+/)
         const text = textSplit[textSplit.length - 1]
 

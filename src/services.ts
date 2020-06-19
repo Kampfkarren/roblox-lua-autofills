@@ -13,11 +13,11 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
 const IMPORT_PATTERN = /^local \w+ = game:GetService\("\w+"\)\s*$/
 
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
-    public serviceMembers: Promise<Map<string, ApiClass>>
-    public servicesCompletion: Promise<vscode.CompletionItem[]>
+    serviceMembers: Promise<Map<string, ApiClass>>
+    servicesCompletion: Promise<vscode.CompletionItem[]>
 
     constructor() {
-        this.serviceMembers = getApiDump().then((dump) => {
+        this.serviceMembers = getApiDump().then(dump => {
             const output = new Map()
 
             for (const klass of dump.Classes) {
@@ -45,7 +45,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
             return output
         })
 
-        this.servicesCompletion = getApiDump().then((dump) => {
+        this.servicesCompletion = getApiDump().then(dump => {
             const output: vscode.CompletionItem[] = []
 
             for (const klass of dump.Classes) {
@@ -63,10 +63,9 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
         })
     }
 
-    public async createCompletionItems(
+    async createCompletionItems(
         service: ApiClass,
         operator: string,
-        inheritMembers = true,
     ): Promise<vscode.CompletionItem[]> {
         let completionItems: vscode.CompletionItem[] = []
 
@@ -152,18 +151,16 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
             }
         }
 
-        if (inheritMembers) {
-            if (service.Superclass) {
-                const klass = (await this.serviceMembers).get(service.Superclass)
-                if (klass) {
-                    const inheritedMembers = await this.createCompletionItems(klass, operator, true)
-                    for (const completionItem of inheritedMembers) {
-                        if (completionItem.documentation) {
-                            (completionItem.documentation as vscode.MarkdownString).value = `Inherited from ${service.Superclass}\n\n${(completionItem.documentation as vscode.MarkdownString).value}`
-                        }
+        if (service.Superclass) {
+            const klass = (await this.serviceMembers).get(service.Superclass)
+            if (klass) {
+                const inheritedMembers = await this.createCompletionItems(klass, operator)
+                for (const completionItem of inheritedMembers) {
+                    if (completionItem.documentation) {
+                        (completionItem.documentation as vscode.MarkdownString).value = `Inherited from ${service.Superclass}\n\n${(completionItem.documentation as vscode.MarkdownString).value}`
                     }
-                    completionItems = completionItems.concat(inheritedMembers)
                 }
+                completionItems = completionItems.concat(inheritedMembers)
             }
         }
 
@@ -179,14 +176,14 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
 
             const service = (await this.serviceMembers).get(serviceName)
 
-            if (service !== undefined && service.Tags && service.Tags.includes("Service")) {
+            if (service !== undefined && service.Tags !== undefined && service.Tags.includes("Service")) {
                 const documentText = document.getText()
 
                 if (!documentText.match(new RegExp(`^local ${serviceName}\\s*=\\s*`, "m"))) {
                     const insertText = `local ${serviceName} = game:GetService("${serviceName}")\n`
                     const lines = documentText.split(/\n\r?/)
 
-                    const firstImport = lines.findIndex((line) => line.match(IMPORT_PATTERN))
+                    const firstImport = lines.findIndex(line => line.match(IMPORT_PATTERN))
                     let lineNumber = Math.max(firstImport, 0)
 
                     while (lineNumber < lines.length) {
@@ -222,11 +219,9 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     return [item]
                 }
 
-                const completionItems = await this.createCompletionItems(service, operator, true)
+                const completionItems = await this.createCompletionItems(service, operator)
 
                 return completionItems
-            } else {
-                return this.servicesCompletion
             }
         }
 
