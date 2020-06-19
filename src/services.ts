@@ -95,7 +95,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
 
                     completionItem.detail = `(function) ${service.Name}:${member.Name}(${params.join(", ")}): ${member.ReturnType ? member.ReturnType.Name : "unknown"}`
                     completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/function/${service.Name}/${member.Name})`)
-                    completionItem.insertText = new vscode.SnippetString(`${member.Name}($0)`)
+                    completionItem.insertText = new vscode.SnippetString(`${member.Name}(${params.length > 0 ? "$0)" : ")$0"}`)
 
                     completionItems.push(completionItem)
                 }
