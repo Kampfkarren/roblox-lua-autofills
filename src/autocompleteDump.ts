@@ -8,6 +8,7 @@ export interface AutocompleteParameter {
     type: string,
     name: string,
     optional: boolean,
+    constraint?: string,
 }
 
 export interface AutocompleteReturn {
@@ -129,6 +130,7 @@ const formatFunction = (func: XMLFunction): AutocompleteFunction => {
             const type = paramObj["#name"]
             const parameterAttributes = paramObj.$
             return {
+                constraint: parameterAttributes.constraint,
                 name: parameterAttributes.name,
                 optional: parameterAttributes.optional === "true",
                 type,
@@ -139,7 +141,7 @@ const formatFunction = (func: XMLFunction): AutocompleteFunction => {
         const type = ret["#name"]
         const returnAttributes = ret.$
         return {
-            name: returnAttributes?.name,
+            name: returnAttributes && returnAttributes.name,
             type,
         }
     }) : []

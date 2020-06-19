@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { getAutocompleteDump } from "./autocompleteDump"
+import { getApiDump, UNCREATABLE_TAGS } from "./dump"
 
 export class ItemStructCompletionProvider implements vscode.CompletionItemProvider {
     public itemStructNames: Promise<vscode.CompletionItem[]>
@@ -8,6 +9,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
     constructor() {
         this.itemStructs = (async () => {
             const autocompleteDump = await getAutocompleteDump()
+            const apiDump = await getApiDump()
             const itemStructs: { [name: string]: vscode.CompletionItem[] } = {}
             for (const itemStruct of autocompleteDump.ItemStruct) {
                 itemStructs[itemStruct.name] = [
@@ -18,16 +20,55 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
                         return item
                     }),
                     ...itemStruct.functions.filter((func) => func.static).map((func) => {
+                        const insertText = new vscode.SnippetString(`${func.name}(`)
+
                         const params = []
-                        for (const param of func.parameters) {
-                            const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
-                            params.push(paramText)
+                        for (const paramIndex in func.parameters) {
+                            if (func.parameters[paramIndex]) {
+                                const param = func.parameters[paramIndex]
+                                const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
+                                params.push(paramText)
+
+                                // Create a snippet if the parameters are definable (eg. Instance.new())
+                                let paramInsertText = null
+                                if (param.constraint) {
+                                    const constraintSplit = param.constraint.split(":")
+                                    const objectType = constraintSplit[0]
+                                    const constraint = constraintSplit[1] || "any"
+
+                                    paramInsertText = apiDump.Classes.filter(klass => {
+                                        if (objectType === "Instance") {
+                                            if (constraint === "any") {
+                                                return true
+                                            } else if (constraint === "isScriptCreatable") {
+                                                const tags = klass.Tags
+                                                if (tags) {
+                                                    for (const tag of tags) {
+                                                        if (UNCREATABLE_TAGS.has(tag)) {
+                                                            return false
+                                                        }
+                                                    }
+                                                }
+                                                return true
+                                            }
+                                        }
+                                        return false
+                                    }).map(klass => klass.Name).sort().join(",")
+                                }
+
+                                if (paramInsertText) {
+                                    insertText.value += `"\${${paramIndex + 1}|${paramInsertText}|}"`
+                                }
+                            }
                         }
+                        // End parantheses and set the cursor inside or outside the parens depending on param count
+                        insertText.value += `${params.length > 0 ? `$0)` : `)$0`}`
 
                         const item = new vscode.CompletionItem(
                             func.name,
                             vscode.CompletionItemKind.Function,
                         )
+                        item.insertText = insertText
                         item.detail = `(function) ${itemStruct.name}.${func.name}(${params.join(", ")}): ${func.returns.length > 0 ? func.returns.map((ret) => ret.type).join(", ") : "unknown"}`
                         item.documentation = new vscode.MarkdownString(`${func.description ? func.description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
                         return item
