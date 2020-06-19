@@ -7,84 +7,165 @@ const AUTOCOMPLETE_METADATA = "https://raw.githubusercontent.com/CloneTrooper101
 export interface AutocompleteParameter {
     type: string,
     name: string,
-    optional: boolean
+    optional: boolean,
 }
 
 export interface AutocompleteReturn {
     type: string,
-    name: string
+    name?: string,
 }
 
 export interface AutocompleteFunction {
     name: string,
     static: boolean,
     description?: string,
-    parameters: AutocompleteParameter[]
-    returns: AutocompleteReturn[]
+    parameters: AutocompleteParameter[],
+    returns: AutocompleteReturn[],
 }
 
 export interface AutocompleteProperty {
     name: string,
     static: boolean,
     type: string,
-    description?: string
+    description?: string,
 }
 
 export interface AutocompleteGroup {
     name: string,
     functions: AutocompleteFunction[],
-    properties: AutocompleteProperty[]
+    properties: AutocompleteProperty[],
 }
 
 export interface AutocompleteDump {
     LuaLibrary: AutocompleteGroup[],
-    ItemStruct: AutocompleteGroup[]
+    ItemStruct: AutocompleteGroup[],
 }
 
-const formatFunction = (func: any): AutocompleteFunction => {
+// Interfaces for the data provided in the XML parser
+interface XMLPropertyPart {
+    _: string, // Description
+    $: {
+        name: string,
+        static?: string,
+    }
+}
+
+interface XMLOrderedPropertyPart extends XMLPropertyPart {
+    "#name": string // Property type
+}
+
+interface XMLProperty {
+    $$: XMLOrderedPropertyPart[],
+    [name: string]: XMLPropertyPart[]
+}
+
+interface XMLFunctionReturnPart {
+    $?: {
+        name?: string,
+    }
+}
+interface XMLOrderedFunctionReturnPart extends XMLFunctionReturnPart { "#name": string }
+
+interface XMLFunctionParameterPart {
+    $: {
+        name: string,
+        constraint?: string,
+        optional?: string,
+    },
+}
+interface XMLOrderedFunctionParameterPart extends XMLFunctionParameterPart { "#name": string }
+
+interface XMLFunction {
+    $: {
+        name: string,
+        static: string,
+    },
+    $$: [], // Shouldn't really be used
+    returns: Array<{
+        $$: XMLOrderedFunctionReturnPart[],
+        [name: string]: XMLFunctionReturnPart[],
+    }>,
+    parameters: Array<{
+        $$: XMLOrderedFunctionParameterPart[],
+        [name: string]: XMLFunctionParameterPart[],
+    }>,
+    description: string[],
+}
+
+interface XMLGroup {
+    $: {
+        name: string,
+    },
+    $$: [], // Shouldnt be used
+    Function?: XMLFunction[],
+    Properties?: XMLProperty[],
+}
+
+interface XMLTree {
+    StudioAutocomplete: {
+        LuaLibrary: XMLGroup[],
+        ItemStruct: XMLGroup[],
+        CoreLibrary: XMLGroup[]
+        ReservedWords: Array<{
+            $$: Array<{
+                $: {
+                    name: string,
+                },
+                "#name": string,
+            }>,
+            Keyword: Array<{
+                $: {
+                    name: string,
+                },
+            }>,
+        }>,
+    }
+}
+
+const formatFunction = (func: XMLFunction): AutocompleteFunction => {
     const attributes = func.$
-    const parameters: AutocompleteParameter[] = 
-        (func.parameters && func.parameters[0].$$) ? func.parameters[0].$$.map((paramObj: any) => {
+    const parameters: AutocompleteParameter[] =
+        (func.parameters && func.parameters[0].$$) ? func.parameters[0].$$.map(paramObj => {
             const type = paramObj["#name"]
             const parameterAttributes = paramObj.$
             return {
                 name: parameterAttributes.name,
-                optional: Boolean(parameterAttributes.optional) || false,
+                optional: parameterAttributes.optional === "true",
                 type,
             }
         }) : []
 
-    const returns = (func.returns && func.returns[0].$$) ? func.returns[0].$$.map((ret: any) => {
+    const returns = (func.returns && func.returns[0].$$) ? func.returns[0].$$.map(ret => {
         const type = ret["#name"]
         const returnAttributes = ret.$
         return {
-            name: returnAttributes ? returnAttributes.name : null,
+            name: returnAttributes?.name,
             type,
         }
     }) : []
 
     return {
-        description: func.description ? func.description[0] : undefined,
+        description: func.description && func.description[0],
         name: attributes.name,
         parameters,
         returns,
-        static: Boolean(attributes.static) || false,
+        static: attributes.static === "true",
     }
 }
 
-const formatProperty = (property: any): AutocompleteProperty => {
+const formatProperty = (property: XMLOrderedPropertyPart): AutocompleteProperty => {
     const description = property._
     const type = property["#name"]
     const attributes = property.$
     return {
       description,
       name: attributes.name,
-      static: Boolean(attributes.static) || false,
+      static: attributes.static === "true",
       type,
     }
 }
 
-const formatGroup = (group: any): AutocompleteGroup => {
+const formatGroup = (group: XMLGroup): AutocompleteGroup => {
     return {
       functions: group.Function ? group.Function.map(formatFunction) : [],
       name: group.$.name,
@@ -92,7 +173,7 @@ const formatGroup = (group: any): AutocompleteGroup => {
     }
 }
 
-const formatter = (tree: any): AutocompleteDump => {
+const formatter = (tree: XMLTree): AutocompleteDump => {
     const root = tree.StudioAutocomplete
     const LuaLibrary = root.LuaLibrary
     const ItemStruct = root.ItemStruct
