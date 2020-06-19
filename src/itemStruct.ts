@@ -3,8 +3,8 @@ import { getAutocompleteDump } from "./autocompleteDump"
 import { getApiDump, UNCREATABLE_TAGS } from "./dump"
 
 export class ItemStructCompletionProvider implements vscode.CompletionItemProvider {
-    public itemStructNames: Promise<vscode.CompletionItem[]>
-    public itemStructs: Promise<{ [name: string]: vscode.CompletionItem[] }>
+    itemStructNames: Promise<vscode.CompletionItem[]>
+    itemStructs: Promise<{ [name: string]: vscode.CompletionItem[] }>
 
     constructor() {
         this.itemStructs = (async () => {
@@ -13,13 +13,13 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
             const itemStructs: { [name: string]: vscode.CompletionItem[] } = {}
             for (const itemStruct of autocompleteDump.ItemStruct) {
                 itemStructs[itemStruct.name] = [
-                    ...itemStruct.properties.filter((property) => property.static).map((property) => {
+                    ...itemStruct.properties.filter(property => property.static).map(property => {
                         const item = new vscode.CompletionItem(property.name, vscode.CompletionItemKind.Field)
                         item.detail = `(property) ${itemStruct.name}.${property.name}: ${property.type}`
                         item.documentation = new vscode.MarkdownString(`${property.description ? property.description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
                         return item
                     }),
-                    ...itemStruct.functions.filter((func) => func.static).map((func) => {
+                    ...itemStruct.functions.filter(func => func.static).map(func => {
                         const insertText = new vscode.SnippetString(`${func.name}(`)
 
                         const params = []
@@ -84,7 +84,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
             return autocompleteDump.ItemStruct.filter(
                 (itemStruct) => {
                     return itemStruct.functions.filter(
-                        (func) => func.static,
+                        func => func.static,
                     ).length > 0 || itemStruct.properties.filter((property) => property.static).length > 0
                 },
             ).map(
@@ -93,7 +93,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
         })()
     }
 
-    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
         const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/[^\w\.]+/)
         const text = textSplit[textSplit.length - 1]
 

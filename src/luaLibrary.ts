@@ -2,8 +2,8 @@ import * as vscode from "vscode"
 import { getAutocompleteDump } from "./autocompleteDump"
 
 export class LuaLibraryCompletionProvider implements vscode.CompletionItemProvider {
-    public luaLibraryNames: Promise<vscode.CompletionItem[]>
-    public luaLibrary: Promise<{ [name: string]: vscode.CompletionItem[] }>
+    luaLibraryNames: Promise<vscode.CompletionItem[]>
+    luaLibrary: Promise<{ [name: string]: vscode.CompletionItem[] }>
 
     constructor() {
         this.luaLibrary = (async () => {
@@ -11,13 +11,13 @@ export class LuaLibraryCompletionProvider implements vscode.CompletionItemProvid
             const luaLibrary: { [name: string]: vscode.CompletionItem[] } = {}
             for (const library of autocompleteDump.LuaLibrary) {
                 luaLibrary[library.name] = [
-                    ...library.properties.map((property) => {
+                    ...library.properties.map(property => {
                         const item = new vscode.CompletionItem(property.name, vscode.CompletionItemKind.Field)
                         item.detail = `(property) ${library.name}.${property.name}: ${property.type}`
                         item.documentation = new vscode.MarkdownString(`${property.description ? property.description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/lua-docs/${library.name})`)
                         return item
                     }),
-                    ...library.functions.map((func) => {
+                    ...library.functions.map(func => {
                         const params = []
                         for (const param of func.parameters) {
                             const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
@@ -41,12 +41,12 @@ export class LuaLibraryCompletionProvider implements vscode.CompletionItemProvid
         this.luaLibraryNames = (async () => {
             const autocompleteDump = await getAutocompleteDump()
             return autocompleteDump.LuaLibrary.map(
-                (library) => new vscode.CompletionItem(library.name, vscode.CompletionItemKind.Module),
+                library => new vscode.CompletionItem(library.name, vscode.CompletionItemKind.Module),
             )
         })()
     }
 
-    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
         const textSplit = document.lineAt(position.line).text.substr(0, position.character).split(/[^\w\.]+/)
         const text = textSplit[textSplit.length - 1]
 
