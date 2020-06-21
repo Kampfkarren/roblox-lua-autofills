@@ -3,6 +3,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+- Added support for ReflectionMetadata. This now downloads the file and injects descriptions to be used
+
 ## [1.7.1]
 - Service auto-importer will now suggest for non-idiomatic whitespace in service declarations.
 
