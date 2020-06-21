@@ -3,8 +3,10 @@
 */
 import * as request from "request-promise-native"
 import * as vscode from "vscode"
+import { parseStringPromise } from "xml2js"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
+const REFLECTION_METADATA_URL = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/ReflectionMetadata.xml"
 
 export const UNCREATABLE_TAGS = new Set([
     "Deprecated",
@@ -145,10 +147,57 @@ export interface ApiDump {
     Version: number,
 }
 
-let apiDumpPromise = (async () => {
-    return JSON.parse(await request(API_DUMP).catch((err) => {
+/*
+    Code borrowed from https://github.com/evaera/vscode-roblox-api-explorer/blob/master/src/api.ts
+*/
+async function injectDescriptions(classes: ApiClass[]) {
+    const rmd = await parseStringPromise(
+        await request(REFLECTION_METADATA_URL).catch((err) => {
+            vscode.window.showErrorMessage("Error downloading API dump", err.toString())
+        }),
+    )
+
+    for (const classEntry of classes) {
+      const entry = rmd.roblox.Item.find(
+        (i: any) => i.$.class === "ReflectionMetadataClasses",
+      ).Item.find((i: any) =>
+        i.Properties[0].string.find(
+          (p: any) => p.$.name === "Name" && p._ === classEntry.Name,
+        )
+      )
+
+      const summary = entry?.Properties[0].string.find(
+        (s: any) => s.$.name === "summary",
+      )?._
+
+      if (entry && entry.Item) {
+        const items = Object.fromEntries(
+          entry.Item.flatMap((i: any) => i.Item)
+            .filter((i: any) => i && i.Properties !== undefined)
+            .map((i: any) => [
+              i.Properties[0].string.find((s: any) => s.$.name === "Name")?._,
+              i.Properties[0].string.find((s: any) => s.$.name === "summary")?._,
+            ])
+            .filter((entry: any) => entry.length === 2),
+        )
+
+        for (const member of classEntry.Members) {
+          if (items[member.Name]) {
+            member.Description = items[member.Name]
+          }
+        }
+      }
+
+      classEntry.Description = summary
+    }
+}
+
+const apiDumpPromise = (async () => {
+    const dump: ApiDump = JSON.parse(await request(API_DUMP).catch((err) => {
         vscode.window.showErrorMessage("Error downloading API dump", err.toString())
-    })) as ApiDump
+    }))
+    await injectDescriptions(dump.Classes)
+    return dump
 })()
 
 export function getApiDump(): Promise<ApiDump> {
