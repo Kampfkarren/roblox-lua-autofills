@@ -48,11 +48,11 @@ interface XMLPropertyPart {
     $: {
         name: string,
         static?: string,
-    }
+    },
 }
 
 interface XMLOrderedPropertyPart extends XMLPropertyPart {
-    "#name": string // Property type
+    "#name": string, // Property type
 }
 
 interface XMLProperty {
@@ -65,7 +65,10 @@ interface XMLFunctionReturnPart {
         name?: string,
     }
 }
-interface XMLOrderedFunctionReturnPart extends XMLFunctionReturnPart { "#name": string }
+
+interface XMLOrderedFunctionReturnPart extends XMLFunctionReturnPart {
+    "#name": string,
+}
 
 interface XMLFunctionParameterPart {
     $: {
@@ -74,14 +77,16 @@ interface XMLFunctionParameterPart {
         optional?: string,
     },
 }
-interface XMLOrderedFunctionParameterPart extends XMLFunctionParameterPart { "#name": string }
+
+interface XMLOrderedFunctionParameterPart extends XMLFunctionParameterPart {
+    "#name": string,
+}
 
 interface XMLFunction {
     $: {
         name: string,
         static: string,
     },
-    $$: [], // Shouldn't really be used
     returns: Array<{
         $$: XMLOrderedFunctionReturnPart[],
         [name: string]: XMLFunctionReturnPart[],
@@ -97,7 +102,6 @@ interface XMLGroup {
     $: {
         name: string,
     },
-    $$: [], // Shouldnt be used
     Function?: XMLFunction[],
     Properties?: XMLProperty[],
 }
@@ -120,7 +124,7 @@ interface XMLTree {
                 },
             }>,
         }>,
-    }
+    },
 }
 
 const formatFunction = (func: XMLFunction): AutocompleteFunction => {
@@ -160,18 +164,18 @@ const formatProperty = (property: XMLOrderedPropertyPart): AutocompleteProperty 
     const type = property["#name"]
     const attributes = property.$
     return {
-      description,
-      name: attributes.name,
-      static: attributes.static === "true",
-      type,
+        description,
+        name: attributes.name,
+        static: attributes.static === "true",
+        type,
     }
 }
 
 const formatGroup = (group: XMLGroup): AutocompleteGroup => {
     return {
-      functions: group.Function ? group.Function.map(formatFunction) : [],
-      name: group.$.name,
-      properties: (group.Properties && group.Properties[0].$$) ? group.Properties[0].$$.map(formatProperty) : [],
+        functions: group.Function ? group.Function.map(formatFunction) : [],
+        name: group.$.name,
+        properties: (group.Properties && group.Properties[0].$$) ? group.Properties[0].$$.map(formatProperty) : [],
     }
 }
 
@@ -184,8 +188,8 @@ const formatter = (tree: XMLTree): AutocompleteDump => {
     const updatedItemStruct = ItemStruct.map(formatGroup)
 
     return {
-      ItemStruct: updatedItemStruct,
-      LuaLibrary: updatedLibrary,
+        ItemStruct: updatedItemStruct,
+        LuaLibrary: updatedLibrary,
     }
 }
 
@@ -193,6 +197,7 @@ const autocompleteMetadataPromise = (async () => {
     const data = await request(AUTOCOMPLETE_METADATA).catch((err) => {
         vscode.window.showErrorMessage("Error downloading Autocomplete Metadata dump", err.toString())
     })
+
     const output = await parseStringPromise(data, {
         explicitChildren: true,
         preserveChildrenOrder: true,

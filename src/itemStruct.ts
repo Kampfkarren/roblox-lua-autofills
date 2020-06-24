@@ -24,14 +24,14 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
 
                         const params = []
                         for (const paramIndex in func.parameters) {
-                            if (func.parameters[paramIndex]) {
+                            if (func.parameters[paramIndex] !== undefined) {
                                 const param = func.parameters[paramIndex]
                                 const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
                                 params.push(paramText)
 
                                 // Create a snippet if the parameters are definable (eg. Instance.new())
-                                let paramInsertText = null
-                                if (param.constraint) {
+                                let paramInsertText
+                                if (param.constraint !== undefined) {
                                     const constraintSplit = param.constraint.split(":")
                                     const objectType = constraintSplit[0]
                                     const constraint = constraintSplit[1] || "any"
@@ -42,7 +42,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
                                                 return true
                                             } else if (constraint === "isScriptCreatable") {
                                                 const tags = klass.Tags
-                                                if (tags) {
+                                                if (tags !== undefined) {
                                                     for (const tag of tags) {
                                                         if (UNCREATABLE_TAGS.has(tag)) {
                                                             return false
@@ -56,7 +56,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
                                     }).map(klass => klass.Name).sort().join(",")
                                 }
 
-                                if (paramInsertText) {
+                                if (paramInsertText !== undefined) {
                                     insertText.value += `"\${${paramIndex + 1}|${paramInsertText}|}"`
                                 }
                             }
@@ -82,13 +82,13 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
         this.itemStructNames = (async () => {
             const autocompleteDump = await getAutocompleteDump()
             return autocompleteDump.ItemStruct.filter(
-                (itemStruct) => {
+                itemStruct => {
                     return itemStruct.functions.filter(
                         func => func.static,
                     ).length > 0 || itemStruct.properties.filter((property) => property.static).length > 0
                 },
             ).map(
-                (itemStruct) => new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class),
+                itemStruct => new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class),
             )
         })()
     }
