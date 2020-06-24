@@ -4,7 +4,6 @@
 import * as request from "request-promise-native"
 import * as vscode from "vscode"
 import { parseStringPromise } from "xml2js"
-import { writeFileSync } from "fs"
 
 const API_DUMP = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/API-Dump.json"
 const REFLECTION_METADATA_URL = "https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/ReflectionMetadata.xml"
