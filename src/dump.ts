@@ -190,27 +190,27 @@ function createDescribedClasses(rmd: RMDump, classes: ApiClass[]): ApiClass[] {
 
     for (const classEntry of classes) {
         const entry = rmd.roblox.Item.find(
-            i => i.$.class === "ReflectionMetadataClasses",
-        )?.Item.find(i =>
-            i.Properties[0].string.find(
-                p => p.$.name === "Name" && p._ === classEntry.Name,
+            item => item.$.class === "ReflectionMetadataClasses",
+        )?.Item.find(item =>
+            item.Properties[0].string.find(
+                property => property.$.name === "Name" && property._ === classEntry.Name,
             ),
         )
 
         const summary = entry?.Properties[0].string.find(
-            s => s.$.name === "summary",
+            property => property.$.name === "summary",
         )?._
 
         const describedMembers: ApiMember[] = []
 
         if (entry !== undefined && entry.Item !== undefined) {
             const items: { [name: string]: string } = Object.fromEntries(
-                entry.Item.flatMap(i => i.Item)
+                entry.Item.flatMap(item => item.Item)
                     .filter<RMDItem>(
-                        (i: RMDItem | undefined): i is RMDItem => i !== undefined && i.Properties !== undefined)
-                    .map(i => [
-                        i.Properties[0].string.find((s: RMDStringProperty) => s.$.name === "Name")?._,
-                        i.Properties[0].string.find((s: RMDStringProperty) => s.$.name === "summary")?._,
+                        (item: RMDItem | undefined): item is RMDItem => item !== undefined && item.Properties !== undefined)
+                    .map(item => [
+                        item.Properties[0].string.find(property => property.$.name === "Name")?._,
+                        item.Properties[0].string.find(property => property.$.name === "summary")?._,
                     ])
                     .filter(output => output.length === 2),
             )
@@ -241,15 +241,15 @@ function createDescribedEnums(rmd: RMDump, enums: ApiEnum[]): ApiEnum[] {
 
     for (const enumEntry of enums) {
         const entry = rmd.roblox.Item.find(
-            i => i.$.class === "ReflectionMetadataEnums",
-        )?.Item.find(i =>
-            i.Properties[0].string.find(
-                p => p.$.name === "Name" && p._ === enumEntry.Name,
+            item => item.$.class === "ReflectionMetadataEnums",
+        )?.Item.find(item =>
+            item.Properties[0].string.find(
+                property => property.$.name === "Name" && property._ === enumEntry.Name,
             ),
         )
 
         const summary = entry?.Properties[0].string.find(
-            s => s.$.name === "summary",
+            property => property.$.name === "summary",
         )?._
 
         const describedEnumItems = [...enumEntry.Items]
@@ -258,10 +258,10 @@ function createDescribedEnums(rmd: RMDump, enums: ApiEnum[]): ApiEnum[] {
             const items: { [name: string]: string } = Object.fromEntries(
                 entry.Item
                     .filter<RMDItem>(
-                        (i: RMDItem | undefined): i is RMDItem => i !== undefined && i.Properties !== undefined)
-                    .map(i => [
-                        i.Properties[0].string.find(s => s.$.name === "Name")?._,
-                        i.Properties[0].string.find(s => s.$.name === "summary")?._,
+                        (item: RMDItem | undefined): item is RMDItem => item !== undefined && item.Properties !== undefined)
+                    .map(item => [
+                        item.Properties[0].string.find(property => property.$.name === "Name")?._,
+                        item.Properties[0].string.find(property => property.$.name === "summary")?._,
                     ])
                     .filter(output => output.length === 2),
             )
