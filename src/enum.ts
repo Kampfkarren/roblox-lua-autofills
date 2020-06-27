@@ -1,9 +1,13 @@
 import * as vscode from "vscode"
-import { getApiDump, ApiEnum } from "./dump"
+import { ApiEnum, getApiDump } from "./dump"
 
 export class EnumCompletionProvider implements vscode.CompletionItemProvider {
     enumItems: Promise<vscode.CompletionItem[]>
     enumNamesAndItems: Promise<{ [name: string]: vscode.CompletionItem[] }>
+    enumProperties = [
+        new vscode.CompletionItem("Name", vscode.CompletionItemKind.Field),
+        new vscode.CompletionItem("Value", vscode.CompletionItemKind.Field),
+    ]
 
     constructor() {
         this.enumItems = (async () => {
@@ -11,7 +15,8 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
 
             return apiDump.Enums
                 .map((eenum: ApiEnum) => new vscode.CompletionItem(
-                    eenum.Name
+                    eenum.Name,
+                    vscode.CompletionItemKind.Enum,
                 ))
         })()
 
@@ -20,7 +25,8 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
             const enumNamesAndItems: { [name: string]: vscode.CompletionItem[] } = {}
 
             for (const eenum of apiDump.Enums) {
-                enumNamesAndItems[eenum.Name] = eenum.Items.map((item) => new vscode.CompletionItem(item.Name))
+                enumNamesAndItems[eenum.Name] = eenum.Items.map(
+                    (item) => new vscode.CompletionItem(item.Name, vscode.CompletionItemKind.EnumMember))
             }
 
             return enumNamesAndItems
@@ -41,6 +47,9 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
                 const enumName = tokens[1]
                 const items = (await this.enumNamesAndItems)[enumName]
                 return items || []
+            } else if (tokens.length === 4) {
+                // Enum.Name.EnumMember.NowImTypingThis
+                return this.enumProperties
             }
         }
     }
