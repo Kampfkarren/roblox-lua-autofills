@@ -134,10 +134,19 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
             const aliasMatch = text.match(/^local\s+(\w+)\s*=\s*Roact\.createElement\s*$/m)
 
             if (callable === "Roact.createElement" || (aliasMatch && callable === aliasMatch[1])) {
-                const availableInstances = (await this.instances)
-                const instance = availableInstances.get(functionMatch[2])
-                if (instance && isCreatableInstance(instance)) {
-                    return this.createCompletionItems(instance)
+                const lineText = document.lineAt(position.line).text
+                // Don't provide items when entering a value
+                // This is done by counting the number of = and the number of matching ,
+                // (Comma is checked as multiple items can be assigned on one line)
+                const equalsCount = lineText.match(/=/g)?.length
+                const commaCount = lineText.match(/,/g)?.length
+
+                if (equalsCount === undefined || (commaCount !== undefined && commaCount >= equalsCount)) {
+                    const availableInstances = (await this.instances)
+                    const instance = availableInstances.get(functionMatch[2])
+                    if (instance && isCreatableInstance(instance)) {
+                        return this.createCompletionItems(instance)
+                    }
                 }
             }
         } else {
