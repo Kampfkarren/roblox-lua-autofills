@@ -22,16 +22,17 @@ const isCreatableInstance = (klass: ApiClass) => {
 }
 
 export class RoactCompletionProvider implements vscode.CompletionItemProvider {
-    public instances: Promise<Map<string, ApiClass>>
+    instances: Promise<Map<string, ApiClass>>
+    creatableInstancesItems: Promise<vscode.CompletionItem[]>
 
     constructor() {
-        this.instances = getApiDump().then((dump) => {
+        this.instances = getApiDump().then(dump => {
             const output = new Map()
 
             for (const klass of dump.Classes) {
                 const klassData = {
                     Description: klass.Description,
-                    Members: klass.Members.filter((member) => {
+                    Members: klass.Members.filter(member => {
                         const tags = member.Tags
                         if (tags !== undefined) {
                             for (const tag of tags) {
@@ -51,6 +52,23 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
             }
 
             return output
+        })
+
+        this.creatableInstancesItems = getApiDump().then(dump => {
+            const completionItems: vscode.CompletionItem[] = []
+
+            for (const klass of dump.Classes.filter(isCreatableInstance)) {
+                const completionItem = new vscode.CompletionItem(
+                    klass.Name,
+                    vscode.CompletionItemKind.Constant,
+                )
+
+                completionItem.detail = `(class) ${klass.Name}`
+                completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/class/${klass.Name})`)
+                completionItems.push(completionItem)
+            }
+
+            return completionItems
         })
     }
 
@@ -120,6 +138,19 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
                 const instance = availableInstances.get(functionMatch[2])
                 if (instance && isCreatableInstance(instance)) {
                     return this.createCompletionItems(instance)
+                }
+            }
+        } else {
+            const beginningCallMatch = text.match(/([\w.]+)\(["']\w*$/)
+            if (beginningCallMatch !== null) {
+                // Provide autocomplete to the first argument to Roact.createElement
+                const callable = beginningCallMatch[1]
+
+                // Check to see if there is an alias
+                const aliasMatch = text.match(/^local\s+(\w+)\s*=\s*Roact\.createElement\s*$/m)
+
+                if (callable === "Roact.createElement" || (aliasMatch && callable === aliasMatch[1])) {
+                    return this.creatableInstancesItems
                 }
             }
         }

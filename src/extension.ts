@@ -42,5 +42,5 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new InstanceCompletionProvider(), "."))
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new EnumCompletionProvider(), "."))
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new ServiceCompletionProvider(), ".", ":"))
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new RoactCompletionProvider(), "."))
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new RoactCompletionProvider(), ".", "\"", "'"))
 }
