@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { ApiClass, ApiPropertySecurity, getApiDump } from "./dump"
+import { ApiClass, ApiPropertySecurity, getApiDump, UNCREATABLE_TAGS } from "./dump"
 
 const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "Deprecated",
@@ -7,6 +7,19 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "NotBrowsable",
     "NotScriptable",
 ])
+
+const isCreatableInstance = (klass: ApiClass) => {
+    const tags = klass.Tags
+    if (tags) {
+        for (const tag of tags) {
+            if (UNCREATABLE_TAGS.has(tag)) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
 
 export class RoactCompletionProvider implements vscode.CompletionItemProvider {
     public instances: Promise<Map<string, ApiClass>>
@@ -105,7 +118,7 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
             if (callable === "Roact.createElement" || (aliasMatch && callable === aliasMatch[1])) {
                 const availableInstances = (await this.instances)
                 const instance = availableInstances.get(functionMatch[2])
-                if (instance) {
+                if (instance && isCreatableInstance(instance)) {
                     return this.createCompletionItems(instance)
                 }
             }
