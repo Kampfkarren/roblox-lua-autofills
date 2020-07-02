@@ -75,15 +75,17 @@ export type MemberTag =
     | "ReadOnly"
     | "Yields"
 
+export interface ApiPropertySecurity {
+    Read: SecurityType,
+    Write: SecurityType,
+}
+
 export interface ApiMemberBase {
     MemberType: string,
     Name: string,
     Security:
         | SecurityType
-        | {
-                Read: SecurityType,
-                Write: SecurityType,
-          },
+        | ApiPropertySecurity,
     Tags?: Array<MemberTag>,
     Description?: string,
 }

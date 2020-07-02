@@ -1,7 +1,7 @@
 // Service member auto complete
 
 import * as vscode from "vscode"
-import { ApiMember, getApiDump } from "./dump"
+import { ApiClass, ApiPropertySecurity, getApiDump } from "./dump"
 
 const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "Deprecated",
@@ -13,15 +13,17 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
 const IMPORT_PATTERN = /^local \w+ = game:GetService\("\w+"\)\s*$/
 
 export class ServiceCompletionProvider implements vscode.CompletionItemProvider {
-    serviceMembers: Promise<Map<string, Array<ApiMember>>>
+    serviceMembers: Promise<Map<string, ApiClass>>
+    servicesCompletion: Promise<vscode.CompletionItem[]>
 
     constructor() {
         this.serviceMembers = getApiDump().then(dump => {
             const output = new Map()
 
             for (const klass of dump.Classes) {
-                if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
-                    output.set(klass.Name, klass.Members.filter((member) => {
+                const klassData = {
+                    Description: klass.Description,
+                    Members: klass.Members.filter((member) => {
                         const tags = member.Tags
                         if (tags !== undefined) {
                             for (const tag of tags) {
@@ -30,9 +32,30 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                                 }
                             }
                         }
-
                         return true
-                    }))
+                    }),
+                    MemoryCategory: klass.MemoryCategory,
+                    Name: klass.Name,
+                    Superclass: klass.Superclass,
+                    Tags: klass.Tags,
+                }
+                output.set(klass.Name, klassData)
+            }
+
+            return output
+        })
+
+        this.servicesCompletion = getApiDump().then(dump => {
+            const output: vscode.CompletionItem[] = []
+
+            for (const klass of dump.Classes) {
+                if (klass.Tags !== undefined && klass.Tags.includes("Service")) {
+                    const completionItem = new vscode.CompletionItem(klass.Name, vscode.CompletionItemKind.Class)
+
+                    completionItem.detail = `(service) ${klass.Name}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/class/${klass.Name})`)
+
+                    output.push(completionItem)
                 }
             }
 
@@ -40,16 +63,120 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
         })
     }
 
-    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    async createCompletionItems(
+        service: ApiClass,
+        operator: string,
+    ): Promise<vscode.CompletionItem[]> {
+        let completionItems: vscode.CompletionItem[] = []
+
+        for (const member of service.Members) {
+            if (member.MemberType === "Property") {
+                const security = member.Security as ApiPropertySecurity
+                if (security.Read !== "None" && security.Write !== "None") {
+                    continue
+                }
+            } else if (member.Security !== "None") {
+                continue
+            }
+
+            if (operator === ":") {
+                if (member.MemberType === "Function") {
+                    const params = []
+
+                    for (const param of member.Parameters) {
+                        const paramText = `${param.Name}${param.Default ? "?" : ""}: ${param.Type ? param.Type.Name : "unknown"}${param.Default ? ` = ${param.Default}` : ""}`
+                        params.push(paramText)
+                    }
+
+                    const completionItem = new vscode.CompletionItem(
+                        member.Name,
+                        vscode.CompletionItemKind.Method,
+                    )
+
+                    completionItem.detail = `(function) ${service.Name}:${member.Name}(${params.join(", ")}): ${member.ReturnType ? member.ReturnType.Name : "unknown"}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/function/${service.Name}/${member.Name})`)
+                    completionItem.insertText = new vscode.SnippetString(`${member.Name}(${params.length > 0 ? "$0)" : ")$0"}`)
+
+                    completionItems.push(completionItem)
+                }
+            } else if (operator === ".") {
+                switch (member.MemberType) {
+                    case "Callback": {
+                        const params = []
+
+                        for (const param of member.Parameters) {
+                            const paramText = `${param.Name}: ${param.Type ? param.Type.Name : "unknown"}`
+                            params.push(paramText)
+                        }
+
+                        const completionItem = new vscode.CompletionItem(
+                            member.Name,
+                            vscode.CompletionItemKind.Constructor,
+                        )
+                        completionItem.detail = `(callback) ${service.Name}.${member.Name} = function (${params.join(", ")})`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/callback/${service.Name}/${member.Name})`)
+
+                        completionItems.push(completionItem)
+                        break
+                    }
+                    case "Event": {
+                        const params = []
+
+                        for (const param of member.Parameters) {
+                            const paramText = `${param.Name}: ${param.Type ? param.Type.Name : "unknown"}`
+                            params.push(paramText)
+                        }
+
+                        const completionItem = new vscode.CompletionItem(
+                            member.Name,
+                            vscode.CompletionItemKind.Event,
+                        )
+                        completionItem.detail = `(event) ${service.Name}.${member.Name}(${params.join(", ")})`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/property/${service.Name}/${member.Name})`)
+
+                        completionItems.push(completionItem)
+                        break
+                    }
+                    case "Property": {
+                        const completionItem = new vscode.CompletionItem(
+                            member.Name,
+                            vscode.CompletionItemKind.Field,
+                        )
+                        completionItem.detail = `(property) ${service.Name}.${member.Name}: ${member.ValueType ? member.ValueType.Name : "unknown"}`
+                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/event/${service.Name}/${member.Name})`)
+                        completionItems.push(completionItem)
+                        break
+                    }
+                }
+            }
+        }
+
+        if (service.Superclass) {
+            const klass = (await this.serviceMembers).get(service.Superclass)
+            if (klass) {
+                const inheritedMembers = await this.createCompletionItems(klass, operator)
+                for (const completionItem of inheritedMembers) {
+                    if (completionItem.documentation) {
+                        (completionItem.documentation as vscode.MarkdownString).value = `Inherited from ${service.Superclass}\n\n${(completionItem.documentation as vscode.MarkdownString).value}`
+                    }
+                }
+                completionItems = completionItems.concat(inheritedMembers)
+            }
+        }
+
+        return completionItems
+    }
+
+    public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
         const serviceMatch = document.lineAt(position.line).text.substr(0, position.character).match(/(\w+)([:.]?)\w*$/)
 
         if (serviceMatch !== null) {
             const serviceName = serviceMatch[1]
             const operator = serviceMatch[2]
 
-            const serviceMembers = (await this.serviceMembers).get(serviceName)
+            const service = (await this.serviceMembers).get(serviceName)
 
-            if (serviceMembers !== undefined) {
+            if (service !== undefined && service.Tags !== undefined && service.Tags.includes("Service")) {
                 const documentText = document.getText()
 
                 if (!documentText.match(new RegExp(`^local ${serviceName}\\s*=\\s*`, "m"))) {
@@ -78,7 +205,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                         vscode.TextEdit.insert(
                             new vscode.Position(lineNumber, 0),
                             insertText + (firstImport === -1 ? "\n" : ""),
-                        )
+                        ),
                     ]
 
                     if (operator !== "") {
@@ -92,61 +219,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     return [item]
                 }
 
-                const completionItems = []
-
-                for (const member of serviceMembers) {
-                    if (member.Security !== "None") {
-                        continue
-                    }
-
-                    if (operator === ":") {
-                        if (member.MemberType === "Function") {
-                            const params = []
-
-                            for (const param of member.Parameters) {
-                                let paramText = param.Name
-
-                                if (param.Default !== undefined) {
-                                    paramText += ` = ${param.Default}`
-                                }
-
-                                params.push(paramText)
-                            }
-
-                            const completionItem = new vscode.CompletionItem(
-                                `${member.Name}(${params.join(", ")})`,
-                                vscode.CompletionItemKind.Method,
-                            )
-
-                            completionItem.insertText = new vscode.SnippetString(`${member.Name}($0)`)
-
-                            completionItems.push(completionItem)
-                        }
-                    } else if (operator === ".") {
-                        switch (member.MemberType) {
-                            case "Callback":
-                                completionItems.push(new vscode.CompletionItem(
-                                    member.Name,
-                                    vscode.CompletionItemKind.Constructor,
-                                ))
-                                break
-
-                            case "Event":
-                                completionItems.push(new vscode.CompletionItem(
-                                    member.Name,
-                                    vscode.CompletionItemKind.Event,
-                                ))
-                                break
-
-                            case "Property":
-                                completionItems.push(new vscode.CompletionItem(
-                                    member.Name,
-                                    vscode.CompletionItemKind.Field,
-                                ))
-                                break
-                        }
-                    }
-                }
+                const completionItems = await this.createCompletionItems(service, operator)
 
                 return completionItems
             }
