@@ -4,6 +4,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 ## [Unreleased]
+- Fixed inherited members not showing up for services.
+- Fixed properties of services not showing up in autofill.
+- Improved documentation provided in autofill, and added relevant Developer Reference links.
 - Added support for the Lua Libraries available in Roblox (math, string, os, etc.).
 - Added support for static methods and properties of Roblox Datatypes (Vector3, Color3, etc.).
 - Fixed Instance.new popping up whenever you typed a "." (dot).
