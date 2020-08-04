@@ -7,6 +7,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Fixed inherited members not showing up for services.
 - Fixed properties of services not showing up in autofill.
 - Improved documentation provided in autofill, and added relevant Developer Reference links.
+- Instance Names, Properties and Events are now autocompleted when assigning them when creating a Roact element (both using `Roact.createElement` and an alias to it)
 
 ## [1.7.1]
 - Service auto-importer will now suggest for non-idiomatic whitespace in service declarations.
