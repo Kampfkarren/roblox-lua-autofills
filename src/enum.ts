@@ -27,11 +27,11 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
 
             for (const eenum of apiDump.Enums) {
                 enumNamesAndItems[eenum.Name] = eenum.Items.map(item => {
-                        const completionItem = new vscode.CompletionItem(item.Name,
-                            vscode.CompletionItemKind.EnumMember)
-                        completionItem.documentation = new vscode.MarkdownString(`${item.Description ? item.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/enum/${eenum.Name})`)
-                        return completionItem
-                    })
+                    const completionItem = new vscode.CompletionItem(item.Name,
+                        vscode.CompletionItemKind.EnumMember)
+                    completionItem.documentation = new vscode.MarkdownString(`${item.Description ? item.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/enum/${eenum.Name})`)
+                    return completionItem
+                })
             }
 
             return enumNamesAndItems
