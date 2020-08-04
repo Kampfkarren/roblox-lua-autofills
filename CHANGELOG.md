@@ -4,6 +4,9 @@ All notable changes to the "roblox-lua-autofills" extension will be documented i
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 ## [Unreleased]
+- Fixed inherited members not showing up for services.
+- Fixed properties of services not showing up in autofill.
+- Improved documentation provided in autofill, and added relevant Developer Reference links.
 - Added color picker support to Color3.fromHSV().
 
 ## [1.7.1]
