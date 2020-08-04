@@ -93,16 +93,21 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
             ).map(
                 itemStruct => {
                     const completionItem = new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class)
+                    completionItem.detail = `(struct) ${itemStruct.name}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
+
                     if (itemStruct.name === "Instance") {
                         const func = itemStruct.functions.find(func => func.name === "new")
                         if (func !== undefined) {
-                            const [ , insertText ] = getFunctionParameters(func, apiDump)
+                            const [ params, insertText ] = getFunctionParameters(func, apiDump)
                             insertText.value = `${itemStruct.name}.${insertText.value}`
                             completionItem.insertText = insertText
+                            completionItem.label = "Instance.new"
+                            completionItem.detail = `(function) ${itemStruct.name}.${func.name}(${params.join(", ")}): ${func.returns.length > 0 ? func.returns.map((ret) => ret.type).join(", ") : "unknown"}`
+                            completionItem.documentation = new vscode.MarkdownString(`${func.description ? func.description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
                         }
                     }
-                    completionItem.detail = `(struct) ${itemStruct.name}`
-                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
+
                     return completionItem
                 },
             )
