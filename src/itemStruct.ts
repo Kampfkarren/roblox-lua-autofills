@@ -8,17 +8,10 @@ const parameterClassFilter = (objectType: string, constraint: string) => {
             if (constraint === "any") {
                 return true
             } else if (constraint === "isScriptCreatable") {
-                const tags = klass.Tags
-                if (tags !== undefined) {
-                    for (const tag of tags) {
-                        if (UNCREATABLE_TAGS.has(tag)) {
-                            return false
-                        }
-                    }
-                }
-                return true
+                return klass.Tags === undefined || klass.Tags.every(tag => !UNCREATABLE_TAGS.has(tag))
             }
         }
+
         return false
     }
 }
@@ -103,7 +96,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
                     if (itemStruct.name === "Instance") {
                         const func = itemStruct.functions.find(func => func.name === "new")
                         if (func !== undefined) {
-                            const [, insertText ] = getFunctionParameters(func, apiDump)
+                            const [ , insertText ] = getFunctionParameters(func, apiDump)
                             insertText.value = `${itemStruct.name}.${insertText.value}`
                             completionItem.insertText = insertText
                         }
