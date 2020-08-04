@@ -20,7 +20,7 @@ export class RobloxColorProvider implements vscode.DocumentColorProvider {
     }
 
     public provideDocumentColors(document: vscode.TextDocument, cancel: vscode.CancellationToken) {
-        const colorRegex = /Color3\.([A-Za-z]+)\(\s*([0-9.]+),\s*([0-9.]+),\s*([0-9]+)\)/g
+        const colorRegex = /Color3\.([A-Za-z]+)\(\s*([0-9.]+),\s*([0-9.]+),\s*([0-9.]+)\)/g
         const colors = []
 
         for (let lineNo = 0; lineNo < document.lineCount; lineNo++) {
