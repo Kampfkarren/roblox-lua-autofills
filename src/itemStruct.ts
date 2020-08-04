@@ -1,6 +1,59 @@
 import * as vscode from "vscode"
-import { getAutocompleteDump } from "./autocompleteDump"
-import { getApiDump, UNCREATABLE_TAGS } from "./dump"
+import { AutocompleteFunction, getAutocompleteDump } from "./autocompleteDump"
+import { ApiClass, ApiDump, getApiDump, UNCREATABLE_TAGS } from "./dump"
+
+const parameterClassFilter = (objectType: string, constraint: string) => {
+    return (klass: ApiClass): boolean => {
+        if (objectType === "Instance") {
+            if (constraint === "any") {
+                return true
+            } else if (constraint === "isScriptCreatable") {
+                const tags = klass.Tags
+                if (tags !== undefined) {
+                    for (const tag of tags) {
+                        if (UNCREATABLE_TAGS.has(tag)) {
+                            return false
+                        }
+                    }
+                }
+                return true
+            }
+        }
+        return false
+    }
+}
+
+const getFunctionParameters = (func: AutocompleteFunction, apiDump: ApiDump): [ string[], vscode.SnippetString ] => {
+    const insertText = new vscode.SnippetString(`${func.name}(`)
+
+    const params = []
+    for (const paramIndex in func.parameters) {
+        if (func.parameters[paramIndex] !== undefined) {
+            const param = func.parameters[paramIndex]
+            const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
+            params.push(paramText)
+
+            // Create a snippet if the parameters are definable (eg. Instance.new())
+            let paramInsertText
+            if (param.constraint !== undefined) {
+                const constraintSplit = param.constraint.split(":")
+                const objectType = constraintSplit[0]
+                const constraint = constraintSplit[1] || "any"
+
+                paramInsertText = apiDump.Classes
+                    .filter(parameterClassFilter(objectType, constraint))
+                    .map(klass => klass.Name).sort().join(",")
+            }
+
+            if (paramInsertText !== undefined) {
+                insertText.value += `"\${${paramIndex + 1}|${paramInsertText}|}"`
+            }
+        }
+    }
+    // End parantheses and set the cursor inside or outside the parens depending on param count
+    insertText.value += `${params.length > 0 ? `$0)` : `)$0`}`
+    return [ params, insertText ]
+}
 
 export class ItemStructCompletionProvider implements vscode.CompletionItemProvider {
     itemStructNames: Promise<vscode.CompletionItem[]>
@@ -20,49 +73,7 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
                         return item
                     }),
                     ...itemStruct.functions.filter(func => func.static).map(func => {
-                        const insertText = new vscode.SnippetString(`${func.name}(`)
-
-                        const params = []
-                        for (const paramIndex in func.parameters) {
-                            if (func.parameters[paramIndex] !== undefined) {
-                                const param = func.parameters[paramIndex]
-                                const paramText = `${param.name}${param.optional ? "?" : ""}: ${param.type || "unknown"}`
-                                params.push(paramText)
-
-                                // Create a snippet if the parameters are definable (eg. Instance.new())
-                                let paramInsertText
-                                if (param.constraint !== undefined) {
-                                    const constraintSplit = param.constraint.split(":")
-                                    const objectType = constraintSplit[0]
-                                    const constraint = constraintSplit[1] || "any"
-
-                                    paramInsertText = apiDump.Classes.filter(klass => {
-                                        if (objectType === "Instance") {
-                                            if (constraint === "any") {
-                                                return true
-                                            } else if (constraint === "isScriptCreatable") {
-                                                const tags = klass.Tags
-                                                if (tags !== undefined) {
-                                                    for (const tag of tags) {
-                                                        if (UNCREATABLE_TAGS.has(tag)) {
-                                                            return false
-                                                        }
-                                                    }
-                                                }
-                                                return true
-                                            }
-                                        }
-                                        return false
-                                    }).map(klass => klass.Name).sort().join(",")
-                                }
-
-                                if (paramInsertText !== undefined) {
-                                    insertText.value += `"\${${paramIndex + 1}|${paramInsertText}|}"`
-                                }
-                            }
-                        }
-                        // End parantheses and set the cursor inside or outside the parens depending on param count
-                        insertText.value += `${params.length > 0 ? `$0)` : `)$0`}`
+                        const [ params, insertText ] = getFunctionParameters(func, apiDump)
 
                         const item = new vscode.CompletionItem(
                             func.name,
@@ -81,14 +92,26 @@ export class ItemStructCompletionProvider implements vscode.CompletionItemProvid
 
         this.itemStructNames = (async () => {
             const autocompleteDump = await getAutocompleteDump()
+            const apiDump = await getApiDump()
             return autocompleteDump.ItemStruct.filter(
-                itemStruct => {
-                    return itemStruct.functions.filter(
+                itemStruct => itemStruct.functions.filter(
                         func => func.static,
-                    ).length > 0 || itemStruct.properties.filter((property) => property.static).length > 0
-                },
+                    ).length > 0 || itemStruct.properties.filter((property) => property.static).length > 0,
             ).map(
-                itemStruct => new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class),
+                itemStruct => {
+                    const completionItem = new vscode.CompletionItem(itemStruct.name, vscode.CompletionItemKind.Class)
+                    if (itemStruct.name === "Instance") {
+                        const func = itemStruct.functions.find(func => func.name === "new")
+                        if (func !== undefined) {
+                            const [, insertText ] = getFunctionParameters(func, apiDump)
+                            insertText.value = `${itemStruct.name}.${insertText.value}`
+                            completionItem.insertText = insertText
+                        }
+                    }
+                    completionItem.detail = `(struct) ${itemStruct.name}`
+                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/datatype/${itemStruct.name})`)
+                    return completionItem
+                },
             )
         })()
     }
