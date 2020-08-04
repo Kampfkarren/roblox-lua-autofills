@@ -8,18 +8,8 @@ const UNSCRIPTABLE_TAGS: Set<string> = new Set([
     "NotScriptable",
 ])
 
-const isCreatableInstance = (klass: ApiClass) => {
-    const tags = klass.Tags
-    if (tags) {
-        for (const tag of tags) {
-            if (UNCREATABLE_TAGS.has(tag)) {
-                return false
-            }
-        }
-    }
-
-    return true
-}
+const isCreatableInstance = (klass: ApiClass) => klass.Tags === undefined ||
+    klass.Tags.every(tag => !UNCREATABLE_TAGS.has(tag))
 
 export class RoactCompletionProvider implements vscode.CompletionItemProvider {
     instances: Promise<Map<string, ApiClass>>
@@ -32,22 +22,14 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
             for (const klass of dump.Classes) {
                 const klassData = {
                     Description: klass.Description,
-                    Members: klass.Members.filter(member => {
-                        const tags = member.Tags
-                        if (tags !== undefined) {
-                            for (const tag of tags) {
-                                if (UNSCRIPTABLE_TAGS.has(tag)) {
-                                    return false
-                                }
-                            }
-                        }
-                        return true
-                    }),
+                    Members: klass.Members.filter(member => member.Tags === undefined ||
+                        member.Tags.every(tag => !UNSCRIPTABLE_TAGS.has(tag))),
                     MemoryCategory: klass.MemoryCategory,
                     Name: klass.Name,
                     Superclass: klass.Superclass,
                     Tags: klass.Tags,
                 }
+
                 output.set(klass.Name, klassData)
             }
 
@@ -113,7 +95,7 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
             if (klass) {
                 const inheritedMembers = await this.createCompletionItems(klass)
                 for (const completionItem of inheritedMembers) {
-                    if (completionItem.documentation) {
+                    if (completionItem.documentation !== undefined) {
                         (completionItem.documentation as vscode.MarkdownString).value = `Inherited from ${service.Superclass}\n\n${(completionItem.documentation as vscode.MarkdownString).value}`
                     }
                 }
@@ -126,14 +108,14 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
 
     public async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
         const text = document.getText(new vscode.Range(new vscode.Position(0, 0), position))
-        const functionMatch = text.match(/([\w.]+)\(["'](\w+)["'],\s*{[\w\s\d.="',:()\[\]]*$/)
+        const functionMatch = text.match(/([\w.]+)\(["'](\w+)["'],\s*{[\w\s\d.-="',:/()\[\]]*$/)
         if (functionMatch !== null) {
             const callable = functionMatch[1]
 
             // Check to see if there is an alias
             const aliasMatch = text.match(/^local\s+(\w+)\s*=\s*Roact\.createElement\s*$/m)
 
-            if (callable === "Roact.createElement" || (aliasMatch && callable === aliasMatch[1])) {
+            if (callable === "Roact.createElement" || (aliasMatch !== null && callable === aliasMatch[1])) {
                 const lineText = document.lineAt(position.line).text
                 // Don't provide items when entering a value
                 // This is done by counting the number of = and the number of matching ,
@@ -144,7 +126,7 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
                 if (equalsCount === undefined || (commaCount !== undefined && commaCount >= equalsCount)) {
                     const availableInstances = (await this.instances)
                     const instance = availableInstances.get(functionMatch[2])
-                    if (instance && isCreatableInstance(instance)) {
+                    if (instance !== undefined && isCreatableInstance(instance)) {
                         return this.createCompletionItems(instance)
                     }
                 }
@@ -158,7 +140,7 @@ export class RoactCompletionProvider implements vscode.CompletionItemProvider {
                 // Check to see if there is an alias
                 const aliasMatch = text.match(/^local\s+(\w+)\s*=\s*Roact\.createElement\s*$/m)
 
-                if (callable === "Roact.createElement" || (aliasMatch && callable === aliasMatch[1])) {
+                if (callable === "Roact.createElement" || (aliasMatch !== null && callable === aliasMatch[1])) {
                     return this.creatableInstancesItems
                 }
             }
