@@ -7,6 +7,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Fixed inherited members not showing up for services.
 - Fixed properties of services not showing up in autofill.
 - Improved documentation provided in autofill, and added relevant Developer Reference links.
+- Added color picker support to Color3.fromHSV().
 
 ## [1.7.1]
 - Service auto-importer will now suggest for non-idiomatic whitespace in service declarations.
