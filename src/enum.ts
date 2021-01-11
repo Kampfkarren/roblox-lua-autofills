@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { ApiEnum, getApiDump } from "./dump"
+import { getApiDump } from "./dump"
 
 export class EnumCompletionProvider implements vscode.CompletionItemProvider {
     enumItems: Promise<vscode.CompletionItem[]>
@@ -14,10 +14,11 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
             const apiDump = await getApiDump()
 
             return apiDump.Enums
-                .map((eenum: ApiEnum) => new vscode.CompletionItem(
-                    eenum.Name,
-                    vscode.CompletionItemKind.Enum,
-                ))
+                .map(eenum => {
+                    const completionItem = new vscode.CompletionItem(eenum.Name, vscode.CompletionItemKind.Enum)
+                    completionItem.documentation = new vscode.MarkdownString(`${eenum.Description ? eenum.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/enum/${eenum.Name})`)
+                    return completionItem
+                })
         })()
 
         this.enumNamesAndItems = (async () => {
@@ -25,8 +26,12 @@ export class EnumCompletionProvider implements vscode.CompletionItemProvider {
             const enumNamesAndItems: { [name: string]: vscode.CompletionItem[] } = {}
 
             for (const eenum of apiDump.Enums) {
-                enumNamesAndItems[eenum.Name] = eenum.Items.map(
-                    (item) => new vscode.CompletionItem(item.Name, vscode.CompletionItemKind.EnumMember))
+                enumNamesAndItems[eenum.Name] = eenum.Items.map(item => {
+                    const completionItem = new vscode.CompletionItem(item.Name,
+                        vscode.CompletionItemKind.EnumMember)
+                    completionItem.documentation = new vscode.MarkdownString(`${item.Description ? item.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/enum/${eenum.Name})`)
+                    return completionItem
+                })
             }
 
             return enumNamesAndItems
