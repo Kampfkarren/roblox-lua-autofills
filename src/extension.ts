@@ -4,7 +4,8 @@ import * as vscode from "vscode"
 import { RobloxColorProvider } from "./color"
 import { Companion } from "./companion"
 import { EnumCompletionProvider } from "./enum"
-import { InstanceCompletionProvider } from "./instance"
+import { ItemStructCompletionProvider } from "./itemStruct"
+import { LuaLibraryCompletionProvider } from "./luaLibrary"
 import { RojoHandler } from "./rojo"
 import { ServiceCompletionProvider } from "./services"
 const SELECTOR = { scheme: "file", language: "lua" }
@@ -38,7 +39,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.languages.registerColorProvider(SELECTOR, new RobloxColorProvider()))
 
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new InstanceCompletionProvider(), "."))
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new EnumCompletionProvider(), "."))
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new ServiceCompletionProvider(), ".", ":"))
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new LuaLibraryCompletionProvider(), "."))
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider(SELECTOR, new ItemStructCompletionProvider(), "."))
 }

@@ -9,6 +9,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Improved documentation provided in autofill, and added relevant Developer Reference links.
 - Added color picker support to Color3.fromHSV().
 - Added support for ReflectionMetadata. This now downloads the file and injects descriptions to be used.
+- Added support for the Lua Libraries available in Roblox (math, string, os, etc.).
+- Added support for static methods and properties of Roblox Datatypes (Vector3, Color3, etc.).
+- Fixed Instance.new popping up whenever you typed a "." (dot).
 
 ## [1.7.1]
 - Service auto-importer will now suggest for non-idiomatic whitespace in service declarations.
