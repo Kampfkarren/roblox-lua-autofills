@@ -53,7 +53,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     const completionItem = new vscode.CompletionItem(klass.Name, vscode.CompletionItemKind.Class)
 
                     completionItem.detail = `(service) ${klass.Name}`
-                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/class/${klass.Name})`)
+                    completionItem.documentation = new vscode.MarkdownString(`${klass.Description ? klass.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/class/${klass.Name})`)
 
                     output.push(completionItem)
                 }
@@ -94,7 +94,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                     )
 
                     completionItem.detail = `(function) ${service.Name}:${member.Name}(${params.join(", ")}): ${member.ReturnType ? member.ReturnType.Name : "unknown"}`
-                    completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/function/${service.Name}/${member.Name})`)
+                    completionItem.documentation = new vscode.MarkdownString(`${member.Description ? member.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/function/${service.Name}/${member.Name})`)
                     completionItem.insertText = new vscode.SnippetString(`${member.Name}(${params.length > 0 ? "$0)" : ")$0"}`)
 
                     completionItems.push(completionItem)
@@ -114,7 +114,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                             vscode.CompletionItemKind.Constructor,
                         )
                         completionItem.detail = `(callback) ${service.Name}.${member.Name} = function (${params.join(", ")})`
-                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/callback/${service.Name}/${member.Name})`)
+                        completionItem.documentation = new vscode.MarkdownString(`${member.Description ? member.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/callback/${service.Name}/${member.Name})`)
 
                         completionItems.push(completionItem)
                         break
@@ -132,7 +132,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                             vscode.CompletionItemKind.Event,
                         )
                         completionItem.detail = `(event) ${service.Name}.${member.Name}(${params.join(", ")})`
-                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/property/${service.Name}/${member.Name})`)
+                        completionItem.documentation = new vscode.MarkdownString(`${member.Description ? member.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/property/${service.Name}/${member.Name})`)
 
                         completionItems.push(completionItem)
                         break
@@ -143,7 +143,7 @@ export class ServiceCompletionProvider implements vscode.CompletionItemProvider 
                             vscode.CompletionItemKind.Field,
                         )
                         completionItem.detail = `(property) ${service.Name}.${member.Name}: ${member.ValueType ? member.ValueType.Name : "unknown"}`
-                        completionItem.documentation = new vscode.MarkdownString(`[Developer Reference](https://developer.roblox.com/en-us/api-reference/event/${service.Name}/${member.Name})`)
+                        completionItem.documentation = new vscode.MarkdownString(`${member.Description ? member.Description + "\n\n" : ""}[Developer Reference](https://developer.roblox.com/en-us/api-reference/event/${service.Name}/${member.Name})`)
                         completionItems.push(completionItem)
                         break
                     }
